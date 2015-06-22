@@ -1,0 +1,107 @@
+{
+  "host": "127.0.0.1",
+  "port": 9900,
+  "pretty_json": true,
+  "endpoints": [{
+      "path": "/info",
+      "methods": {
+        "GET": {
+          "type": "info"
+        }
+      }
+    },
+    {
+      "path": "/some/{mac:[0-9a-fA-F]{12}}",
+      "methods": {
+        "GET": {
+          "type": "shell",
+          "config": {
+            "commands": [
+              {
+                "chdir": "/tmp",
+                "command": "uname -a | wc -w"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "path": "/ip",
+      "methods": {
+        "GET": {
+          "type": "http",
+          "config": {
+            "urls": [
+              {
+                "url": "http://ip.jsontest.com/"
+              }
+            ]
+          }
+        },
+        "POST": {
+          "type": "http",
+          "config": {
+            "urls": [
+              {
+                "url": "http://ip.jsontest.com/",
+                "format": "json",
+                "method": "GET"
+              }
+            ]
+          }
+        }      }
+    },
+    {
+      "path": "/postgres/{id:[0-9]+}",
+      "methods": {
+        "GET": {
+          "type": "postgres",
+          "config": {
+            "url": "postgres://user:pass@localhost/database",
+            "return_queries": true,
+            "queries": [
+              {
+                "methods": ["GET"],
+                "query": "SELECT * FROM auth_user WHERE id = $1",
+                "args": [
+                  "{{.url.id}}"
+                ]
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "path": "/redis/{id:[0-9]+}",
+      "methods": {
+        "GET": {
+          "type": "redis",
+          "config": {
+            "database": 1,
+            "return_queries": true,
+            "queries": [
+              {
+                "command": "GET",
+                "args": [
+                  "aaaa"
+                ],
+                "type": "string"
+              }
+            ]
+          }
+        }
+      }
+    }
+  ],
+  "authorizers": {
+    "basic": {
+      "type": "basic",
+      "config": {
+        "username": "hello",
+        "password": "world"
+      }
+    }
+  }
+}
