@@ -251,11 +251,6 @@ Run queries on postgres database. Configuration for postgres task:
             "args": [
                 "{{.url.id}}"
             ]
-        }, {
-            "query": "DELETE FROM product WHERE id = $1",
-            "args": [
-                "{{.url.id}}"
-            ]
         }]
     }
 
