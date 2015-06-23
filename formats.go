@@ -1,17 +1,18 @@
 package goexpose
+
 import (
-	"sync"
-	"fmt"
 	"encoding/json"
+	"fmt"
 	"strings"
+	"sync"
 )
 
 // format function
 type FormatFunc func(string) (interface{}, error)
 
 var (
-	formats = map[string]FormatFunc{}
-	formatslock = &sync.RWMutex{}
+	formats          = map[string]FormatFunc{}
+	formatslock      = &sync.RWMutex{}
 	formatsdelimiter = "|"
 )
 
@@ -25,7 +26,7 @@ func init() {
 
 /*
 Register format function
- */
+*/
 func RegisterFormat(id string, fn FormatFunc) {
 	formatslock.Lock()
 	defer formatslock.Unlock()
@@ -41,7 +42,7 @@ Verify given format
 
 format can be multiple formats separated by "|". if text is not found in format
 it is automatically added.
- */
+*/
 func VerifyFormat(format string) (result string, err error) {
 	formatslock.RLock()
 	defer formatslock.RUnlock()
@@ -72,14 +73,14 @@ func VerifyFormat(format string) (result string, err error) {
 
 /*
 Formats body
- */
+*/
 func Format(body string, f string) (result interface{}, format string, err error) {
 	formatslock.RLock()
 	defer formatslock.RUnlock()
 
 	var (
 		formatter FormatFunc
-		ok bool
+		ok        bool
 	)
 	for _, part := range strings.Split(f, formatsdelimiter) {
 		if formatter, ok = formats[part]; !ok {
@@ -88,6 +89,7 @@ func Format(body string, f string) (result interface{}, format string, err error
 		}
 		result, err = formatter(body)
 		format = part
+
 		if err == nil {
 			return
 		}
@@ -98,7 +100,7 @@ func Format(body string, f string) (result interface{}, format string, err error
 
 /*
 
- */
+*/
 func HasFormat(format, id string) bool {
 	for _, part := range strings.Split(format, formatsdelimiter) {
 		if part == id {
@@ -110,7 +112,7 @@ func HasFormat(format, id string) bool {
 
 /*
 
- */
+*/
 func AddFormat(format, id string) (result string) {
 
 	for _, part := range strings.Split(format, formatsdelimiter) {
@@ -129,11 +131,11 @@ func AddFormat(format, id string) (result string) {
 
 /*
 Formats body as json (map[string]interface{})
- */
-func FormatJSON(body string)(result interface{}, err error) {
+*/
+func FormatJSON(body string) (result interface{}, err error) {
 	data := map[string]interface{}{}
 
-	if err = json.Unmarshal([]byte(body), data); err != nil {
+	if err = json.Unmarshal([]byte(body), &data); err != nil {
 		return
 	}
 
@@ -143,15 +145,15 @@ func FormatJSON(body string)(result interface{}, err error) {
 
 /*
 Formats body as json lines
- */
-func FormatJSONLines(body string)(result interface{}, err error) {
+*/
+func FormatJSONLines(body string) (result interface{}, err error) {
 
 	r := []map[string]interface{}{}
 
-	for _, line :=  range strings.Split(body, "\n") {
+	for _, line := range strings.Split(body, "\n") {
 		data := map[string]interface{}{}
 
-		if err = json.Unmarshal([]byte(line), data); err != nil {
+		if err = json.Unmarshal([]byte(line), &data); err != nil {
 			return
 		}
 
@@ -164,16 +166,16 @@ func FormatJSONLines(body string)(result interface{}, err error) {
 
 /*
 Formats body as lines of text (delimited by \n)
- */
-func FormatLines(body string)(result interface{}, err error) {
+*/
+func FormatLines(body string) (result interface{}, err error) {
 	result = strings.Split(body, "\n")
 	return
 }
 
 /*
 Text format just returns body
- */
-func FormatText(body string)(result interface{}, err error) {
+*/
+func FormatText(body string) (result interface{}, err error) {
 	result = body
 	return
 }
