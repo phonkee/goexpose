@@ -30,6 +30,7 @@ Lets see example configuration file:
             "cert": "./cert.pem",
             "key": "./key.pem"
         },
+        "reload_env": true,
         "endpoints": [{
             "path": "/info",
             "authorizers": ["basic"],
@@ -59,6 +60,7 @@ Configuration:
 * ssl - ssl settings 
     * cert - cert file
     * key - key file
+* reload_env - reload env variables on every request
 * endpoints - list of endpoints, config for endpoint:    
     * path - url path
     * authorizers - list of authorizers applied to this endpoint (see Authorizers)
@@ -85,9 +87,11 @@ text/template is used and available data is in this structure:
         "request": {
             "method": "",
             "body": ""
-        }
+        },
+        "env": {}
     }
 
+* env - environment variables
 * url - variables from url regular expressions
 * query - query values from "query_params"
 * request - request vars from goexpose request
@@ -263,7 +267,7 @@ Run queries on postgres database. Configuration for postgres task:
 Configuration:
 * return_queries - whether queries with args should be added 
 * queries - list of queries
-    * url - postgres url (passed to sql.Open, refer to https://github.com/lib/pq)
+    * url - postgres url (passed to sql.Open, refer to https://github.com/lib/pq), interpolated (see Interpolation)
     * methods - allowed methods, if not specified all methods are allowed
     * query - sql query with placeholders $1, $2 ... (query is not interpolated!!!)
     * args - list of arguments to query - all queries are interpolated (see Interpolation).
@@ -293,7 +297,7 @@ Task that can run multiple commands on redis. Example:
 Config:
   
 * address - address to connect to (see http://godoc.org/github.com/garyburd/redigo/redis#Dial)
-    Default: ":6379"
+    Default: ":6379", interpolated (see Interpolation)
 * network - network (see http://godoc.org/github.com/garyburd/redigo/redis#Dial)
     Default: "tcp"
 * database - database number
@@ -342,8 +346,8 @@ Configuration:
 * queries - list of queries configurations, query configuration:
     * query - query with placeholders
     * args - arguments to query which are interpolated (See interpolation)
-    * cluster - list of hosts in cluster
-    * keyspace - keyspace to use
+    * cluster - list of hosts in cluster, all args are interpolated (see Interpolation)
+    * keyspace - keyspace to use, interpolated (see Interpolation)
 
 
 MySQLTask:
@@ -368,7 +372,7 @@ Run mysql queries. Example:
 Configuration:
 * return_queries - whether to return query with args to response
 * queries - list of queries, query config:
-    * url - url to connect to (refer to https://github.com/go-sql-driver/mysql)
+    * url - url to connect to (refer to https://github.com/go-sql-driver/mysql), interpolated (see Interpolation)
     * query - query with placeholders
     * args - list of arguments, every argument will be interpolated (see Interpolation)
 

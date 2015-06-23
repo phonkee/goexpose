@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"net/http"
 	"regexp"
 	"strings"
-	"net/http"
 )
 
 /*
@@ -48,6 +48,7 @@ type Config struct {
 	PrettyJson  bool                         `json:"pretty_json"`
 	Authorizers map[string]*AuthorizerConfig `json:"authorizers"`
 	Endpoints   []*EndpointConfig            `json:"endpoints"`
+	ReloadEnv   bool                         `json:"reload_env"`
 }
 
 /*
@@ -112,7 +113,6 @@ func (t *TaskConfig) Validate() (err error) {
 		}
 	}
 
-
 	return
 }
 
@@ -144,7 +144,7 @@ type QueryParams struct {
 	Params       []*QueryParamsConfigParam `json:"params"`
 }
 
-func (q *QueryParams ) Validate() (err error) {
+func (q *QueryParams) Validate() (err error) {
 
 	var re *regexp.Regexp
 
@@ -171,7 +171,7 @@ func (q *QueryParams ) Validate() (err error) {
 
 /*
 Returns params from request
- */
+*/
 func (q *QueryParams) GetParams(r *http.Request) (result map[string]string) {
 	result = map[string]string{}
 

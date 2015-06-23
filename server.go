@@ -11,6 +11,8 @@ import (
 
 	"code.google.com/p/gorilla/mux"
 	"github.com/golang/glog"
+	"os"
+	"strings"
 )
 
 var (
@@ -180,6 +182,9 @@ Outer:
 Handle func
 */
 func (s *Server) Handle(task Tasker, authorizers Authorizers, ec *EndpointConfig, tc *TaskConfig) http.HandlerFunc {
+
+	env := s.GetEnv()
+
 	return func(w http.ResponseWriter, r *http.Request) {
 		t := time.Now()
 		defer func() {
@@ -215,6 +220,13 @@ func (s *Server) Handle(task Tasker, authorizers Authorizers, ec *EndpointConfig
 				"method": r.Method,
 				"body":   body,
 			},
+		}
+
+		// reload environment every request?
+		if s.Config.ReloadEnv {
+			params["env"] = s.GetEnv()
+		} else {
+			params["env"] = env
 		}
 
 		// prepare response
@@ -272,4 +284,21 @@ func (s *Server) GetQueryParams(r *http.Request, ec *EndpointConfig) (result map
 	}
 
 	return
+}
+
+/*
+Get environment variables
+ */
+func (s *Server) GetEnv() map[string]interface{}  {
+	result := map[string]interface{}{}
+	for _, v := range os.Environ() {
+		splitted := strings.SplitN(v, "=", 2)
+		if len(splitted) != 2 {
+			continue
+		}
+
+		key, value := strings.TrimSpace(splitted[0]), strings.TrimSpace(splitted[1])
+		result[key] = value
+	}
+	return result
 }

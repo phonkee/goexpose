@@ -61,7 +61,6 @@ func (s *ShellTaskConfigCommand) Validate() (err error) {
 	return
 }
 
-
 func NewShellTaskConfig() *ShellTaskConfig {
 	return &ShellTaskConfig{
 		Shell: "/bin/sh",
@@ -451,6 +450,16 @@ func (p *PostgresTask) Run(r *http.Request, data map[string]interface{}) (interf
 	for _, query := range p.config.Queries {
 
 		item := Item{}
+		var (
+			err error
+			url string
+		)
+		if url, err = p.Interpolate(query.URL, data); err != nil {
+			item.Error = err.Error()
+			queryresults = append(queryresults, item)
+			continue
+		}
+
 		// interpolate all args
 		args := []interface{}{}
 		for _, arg := range query.Args {
@@ -474,7 +483,7 @@ func (p *PostgresTask) Run(r *http.Request, data map[string]interface{}) (interf
 			errq error
 		)
 
-		db, err := sqlx.Connect("postgres", query.URL)
+		db, err := sqlx.Connect("postgres", url)
 		if err != nil {
 
 			if err, ok := err.(*pq.Error); ok {
@@ -646,8 +655,13 @@ func (rt *RedisTask) Run(r *http.Request, data map[string]interface{}) (rr inter
 
 	status = http.StatusOK
 
+	var address string
+	if address, err = rt.Interpolate(rt.config.Address, data); err != nil {
+		return
+	}
+
 	var conn redis.Conn
-	if conn, err = redis.Dial(rt.config.Network, rt.config.Address); err != nil {
+	if conn, err = redis.Dial(rt.config.Network, address); err != nil {
 		return
 	}
 
@@ -817,9 +831,21 @@ func (c *CassandraTask) Run(r *http.Request, data map[string]interface{}) (res i
 		rquery := ResultQuery{
 			Result: []map[string]interface{}{},
 		}
+
+		chosts := []string{}
+		for _, i := range query.Cluster {
+			var chost string
+			if chost, err = c.Interpolate(i, data); err != nil {
+				return
+			}
+			chosts = append(chosts, chost)
+		}
+
 		// instantiate cluster
-		cluster := gocql.NewCluster(query.Cluster...)
-		cluster.Keyspace = query.Keyspace
+		cluster := gocql.NewCluster(chosts...)
+		if cluster.Keyspace, err = c.Interpolate(query.Keyspace, data); err != nil {
+			return
+		}
 
 		session, err := cluster.CreateSession()
 		if err != nil {
@@ -967,11 +993,17 @@ func (m *MySQLTask) Run(r *http.Request, data map[string]interface{}) (res inter
 			Rows: []map[string]interface{}{},
 		}
 
+		var url string
+		if url, err = m.Interpolate(query.URL, data); err != nil {
+			item.Error = err.Error()
+			goto Append
+		}
+
 		if m.config.ReturnQueries {
 			item.Query = query.Query
 		}
 
-		if db, err = sqlx.Open("mysql", query.URL); err != nil {
+		if db, err = sqlx.Open("mysql", url); err != nil {
 			if err, ok := err.(*mysql.MySQLError); ok {
 				item.Error = err.Message
 				item.Code = int(err.Number)
