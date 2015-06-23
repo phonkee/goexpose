@@ -234,12 +234,15 @@ func (s *Server) Handle(task Tasker, authorizers Authorizers, ec *EndpointConfig
 			}
 		}
 
-
 		if result, status, err := task.Run(r, params); err == nil {
+			if status == 0 {
+				status = http.StatusOK
+			}
 			response = response.Status(status).Result(result)
 		} else {
 			// @TODO: status wat?
 			response.Status(http.StatusInternalServerError).Error(err)
+			glog.Error(err)
 		}
 
 		response.Write(w, r, t)

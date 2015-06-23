@@ -12,32 +12,55 @@ import (
 	"strings"
 
 	"github.com/garyburd/redigo/redis"
+	"github.com/go-sql-driver/mysql"
+	"github.com/gocql/gocql"
 	"github.com/jmoiron/sqlx"
-	_ "github.com/lib/pq"
+	"github.com/lib/pq"
 )
 
 func init() {
 	// register task factories
-	RegisterTaskFactory("shell", ShellTaskFactory)
-	RegisterTaskFactory("info", InfoTaskFactory)
+	RegisterTaskFactory("cassandra", CassandraTaskFactory)
 	RegisterTaskFactory("http", HttpTaskFactory)
+	RegisterTaskFactory("info", InfoTaskFactory)
+	RegisterTaskFactory("mysql", MySQLTaskFactory)
 	RegisterTaskFactory("postgres", PostgresTaskFactory)
 	RegisterTaskFactory("redis", RedisTaskFactory)
+	RegisterTaskFactory("shell", ShellTaskFactory)
 }
 
 /*
 Config for info task
 */
 type ShellTaskConfig struct {
-	Env      map[string]string `json:"env"`
-	Shell    string            `json:"shell"`
-	Commands []struct {
-		Command       string `json:"command`
-		Chdir         string `json:"chdir"`
-		Format        string `json:"format"`
-		ReturnCommand bool   `json:"return_command"`
-	} `json:"commands"`
+	Env      map[string]string         `json:"env"`
+	Shell    string                    `json:"shell"`
+	Commands []*ShellTaskConfigCommand `json:"commands"`
 }
+
+func (s *ShellTaskConfig) Validate() (err error) {
+	for _, c := range s.Commands {
+		if err = c.Validate(); err != nil {
+			return
+		}
+	}
+	return
+}
+
+type ShellTaskConfigCommand struct {
+	Command       string `json:"command`
+	Chdir         string `json:"chdir"`
+	Format        string `json:"format"`
+	ReturnCommand bool   `json:"return_command"`
+}
+
+func (s *ShellTaskConfigCommand) Validate() (err error) {
+	if s.Format, err = VerifyFormat(s.Format); err != nil {
+		return
+	}
+	return
+}
+
 
 func NewShellTaskConfig() *ShellTaskConfig {
 	return &ShellTaskConfig{
@@ -52,6 +75,10 @@ Factory for SHellTask task
 func ShellTaskFactory(server *Server, taskconfig *TaskConfig) (tasks []Tasker, err error) {
 	config := NewShellTaskConfig()
 	if err = json.Unmarshal(taskconfig.Config, config); err != nil {
+		return
+	}
+
+	if err = config.Validate(); err != nil {
 		return
 	}
 
@@ -180,7 +207,7 @@ func (i *InfoTask) Run(r *http.Request, data map[string]interface{}) (interface{
 		Type        string   `json:"type"`
 	}
 
-	routes := []Item{}
+	endpoints := []Item{}
 
 	// add tasks to result
 	for _, route := range i.routes {
@@ -191,9 +218,9 @@ func (i *InfoTask) Run(r *http.Request, data map[string]interface{}) (interface{
 			Type:        route.TaskConfig.Type,
 		}
 
-		routes = append(routes, item)
+		endpoints = append(endpoints, item)
 	}
-	data["tasks"] = routes
+	data["endpoints"] = endpoints
 
 	return data, http.StatusOK, nil
 }
@@ -229,11 +256,8 @@ func (h *HttpTaskConfig) Validate() (err error) {
 			return fmt.Errorf("Invalid url in http task.")
 		}
 
-		switch url.Format {
-		case "text", "json", "":
-			// no-op
-		default:
-			return fmt.Errorf("unknown format %s", url.Format)
+		if url.Format, err = VerifyFormat(url.Format); err != nil {
+			return err
 		}
 	}
 
@@ -296,7 +320,7 @@ func (h *HttpTask) Run(r *http.Request, data map[string]interface{}) (rr interfa
 		// prepare response
 		result := map[string]interface{}{}
 
-		if url.PostBody {
+		if url.PostBody && r.Body != nil {
 			body = r.Body
 		}
 
@@ -346,29 +370,20 @@ func (h *HttpTask) Run(r *http.Request, data map[string]interface{}) (rr interfa
 		format := url.Format
 
 		// try to guess json
-		if format == "" {
+		if !HasFormat(format, "json") {
 			ct := strings.ToLower(r.Header.Get("Content-Type"))
 			if strings.Contains(ct, "application/json") {
-				format = "json"
-			} else {
-				format = "text"
+				if !HasFormat(format, "json") {
+					format = AddFormat(format, "json")
+				}
 			}
 		}
 
-		// examine formats
-	Out:
-		switch format {
-		case "json":
-			rdata := map[string]interface{}{}
-			if err = json.Unmarshal(respbody, &rdata); err != nil {
-				format = "text"
-				break Out
-			}
-			result["response"] = rdata
-			result["format"] = format
-		case "text":
-			result["response"] = string(respbody)
-			result["format"] = format
+		if re, f, e := Format(string(respbody), url.Format); e == nil {
+			result["response"] = re
+			result["format"] = f
+		} else {
+			result["error"] = e
 		}
 
 		results = append(results, result)
@@ -399,12 +414,12 @@ func PostgresTaskFactory(server *Server, tc *TaskConfig) (tasks []Tasker, err er
 }
 
 type PostgresTaskConfig struct {
-	URL           string                     `json:"url"`
 	Queries       []*PostgresTaskConfigQuery `json:"queries"`
 	ReturnQueries bool                       `json:"return_queries"`
 }
 
 type PostgresTaskConfigQuery struct {
+	URL   string   `json:"url"`
 	Query string   `json:"query"`
 	Args  []string `json:"args"`
 }
@@ -425,13 +440,14 @@ Run postgres task
 func (p *PostgresTask) Run(r *http.Request, data map[string]interface{}) (interface{}, int, error) {
 
 	type Item struct {
-		Error string                   `json:"error,omitempty"`
-		Rows  []map[string]interface{} `json:"rows,omitempty"`
-		Query string                   `json:"query,omitempty"`
-		Args  []interface{}            `json:"args,omitempty"`
+		Error     string                   `json:"error,omitempty"`
+		ErrorCode string                   `json:"error_code,omitempty"`
+		Rows      []map[string]interface{} `json:"rows,omitempty"`
+		Query     string                   `json:"query,omitempty"`
+		Args      []interface{}            `json:"args,omitempty"`
 	}
 	queryresults := []Item{}
-Outer:
+
 	for _, query := range p.config.Queries {
 
 		item := Item{}
@@ -453,32 +469,48 @@ Outer:
 			item.Args = args
 		}
 
-		db, err := sqlx.Connect("postgres", p.config.URL)
+		var (
+			rows *sqlx.Rows
+			errq error
+		)
+
+		db, err := sqlx.Connect("postgres", query.URL)
 		if err != nil {
+
+			if err, ok := err.(*pq.Error); ok {
+				item.ErrorCode = err.Code.Name()
+			}
+
 			item.Error = err.Error()
-			queryresults = append(queryresults, item)
-			continue
+			goto Append
 		}
 
 		// run query
-		rows, err := db.Queryx(query.Query, args...)
-		if err != nil {
-			item.Error = err.Error()
-			queryresults = append(queryresults, item)
-			continue Outer
+		rows, errq = db.Queryx(query.Query, args...)
+		if errq != nil {
+			if errq, ok := errq.(*pq.Error); ok {
+				item.ErrorCode = errq.Code.Name()
+			}
+
+			item.Error = errq.Error()
+			goto Append
 		}
 
 		for rows.Next() {
 			results := make(map[string]interface{})
 			err = rows.MapScan(results)
 			if err != nil {
+				if err, ok := err.(*pq.Error); ok {
+					item.ErrorCode = err.Code.Name()
+				}
+
 				item.Error = err.Error()
-				queryresults = append(queryresults, item)
-				continue Outer
+				goto Append
 			}
 			item.Rows = append(item.Rows, results)
 		}
 
+	Append:
 		queryresults = append(queryresults, item)
 	}
 
@@ -678,4 +710,322 @@ func (r *RedisTask) GetReply(reply interface{}, query RedisTaskConfigQuery) (int
 		return fn(reply, nil)
 	}
 
+}
+
+/*
+Cassandra Task
+
+Run queries on cassandra cluster
+*/
+
+type CassandraTaskConfig struct {
+	Queries       []CassandraTaskConfigQuery `json:"queries"`
+	ReturnQueries bool                       `json:"return_queries"`
+}
+
+/*
+Validate config
+*/
+func (c *CassandraTaskConfig) Validate() (err error) {
+
+	if len(c.Queries) == 0 {
+		return fmt.Errorf("please provide at least one cassandra query")
+	}
+	for _, query := range c.Queries {
+		if err = query.Validate(); err != nil {
+			return err
+		}
+	}
+
+	return
+}
+
+/*
+Config for Query
+*/
+type CassandraTaskConfigQuery struct {
+	Cluster  []string `json:"cluster"`
+	Keyspace string   `json:"keyspace"`
+	Query    string   `json:"query"`
+	Args     []string `json:"args"`
+}
+
+/*
+Validate query config
+*/
+func (c *CassandraTaskConfigQuery) Validate() (err error) {
+	if len(c.Cluster) == 0 {
+		return fmt.Errorf("cluster must have at least one url")
+	}
+
+	c.Keyspace = strings.TrimSpace(c.Keyspace)
+	if c.Keyspace == "" {
+		return fmt.Errorf("please provide keyspace.")
+	}
+
+	return
+}
+
+func CassandraTaskFactory(s *Server, tc *TaskConfig) (result []Tasker, err error) {
+	config := &CassandraTaskConfig{}
+	if err = json.Unmarshal(tc.Config, config); err != nil {
+		return
+
+	}
+	if err = config.Validate(); err != nil {
+		return
+	}
+	result = []Tasker{&CassandraTask{
+		config: config,
+	}}
+	return
+}
+
+/*
+Cassandra task to run queries on cassandra
+*/
+type CassandraTask struct {
+	Task
+
+	// configuration
+	config *CassandraTaskConfig
+}
+
+/*
+Run cassandra task
+*/
+func (c *CassandraTask) Run(r *http.Request, data map[string]interface{}) (res interface{}, status int, err error) {
+
+	type ResultQuery struct {
+		Query  string                   `json:"query,omitempty"`
+		Args   []interface{}            `json:"args,omitempty"`
+		Error  error                    `json:"error"`
+		Result []map[string]interface{} `json:"result"`
+	}
+
+	type Result struct {
+		Queries []ResultQuery `json:"queries"`
+	}
+
+	result := &Result{
+		Queries: []ResultQuery{},
+	}
+
+	for _, query := range c.config.Queries {
+		args := []interface{}{}
+
+		rquery := ResultQuery{
+			Result: []map[string]interface{}{},
+		}
+		// instantiate cluster
+		cluster := gocql.NewCluster(query.Cluster...)
+		cluster.Keyspace = query.Keyspace
+
+		session, err := cluster.CreateSession()
+		if err != nil {
+			rquery.Error = err
+			goto Append
+		}
+
+		if c.config.ReturnQueries {
+			rquery.Query = query.Query
+		}
+
+		for _, arg := range query.Args {
+			final, err := c.Interpolate(arg, data)
+			if err != nil {
+				rquery.Error = err
+				goto Append
+			} else {
+				args = append(args, final)
+			}
+		}
+
+		if c.config.ReturnQueries {
+			rquery.Args = args
+		}
+
+		// slicemap to result
+		if rquery.Result, err = session.Query(query.Query, args...).Iter().SliceMap(); err != nil {
+			rquery.Error = err
+			goto Append
+		} else {
+			goto Append
+		}
+
+	Append:
+		result.Queries = append(result.Queries, rquery)
+	}
+	res = result
+
+	return
+}
+
+/*
+MySQLTask
+
+run queries on mysql
+*/
+
+type MySQLTaskConfig struct {
+	ReturnQueries bool                    `json:"return_queries"`
+	Queries       []*MySQLTaskConfigQuery `json:"queries"`
+}
+
+/*
+Validate mysql config
+*/
+func (m *MySQLTaskConfig) Validate() (err error) {
+	if len(m.Queries) == 0 {
+		return fmt.Errorf("please provide at leas one query.")
+	}
+
+	for _, q := range m.Queries {
+		if err = q.Validate(); err != nil {
+			return
+		}
+	}
+
+	return
+}
+
+/*
+Configuration for single query
+*/
+type MySQLTaskConfigQuery struct {
+	URL   string   `json:"url"`
+	Query string   `json:"query"`
+	Args  []string `json:"args"`
+}
+
+func (m *MySQLTaskConfigQuery) Validate() (err error) {
+	m.URL = strings.TrimSpace(m.URL)
+	if m.URL == "" {
+		return fmt.Errorf("please provide url for query")
+	}
+
+	m.Query = strings.TrimSpace(m.Query)
+
+	if m.Query == "" {
+		return fmt.Errorf("please provide query")
+	}
+	return
+}
+
+/*
+Factory to create task
+*/
+func MySQLTaskFactory(s *Server, tc *TaskConfig) (result []Tasker, err error) {
+	config := &MySQLTaskConfig{}
+	if err = json.Unmarshal(tc.Config, config); err != nil {
+		return
+	}
+
+	result = []Tasker{&MySQLTask{
+		config: config,
+	}}
+	return
+}
+
+/*
+MySQL task imlpementation
+*/
+type MySQLTask struct {
+	Task
+
+	// configuration
+	config *MySQLTaskConfig
+}
+
+/*
+Run mysql task.
+*/
+func (m *MySQLTask) Run(r *http.Request, data map[string]interface{}) (res interface{}, status int, err error) {
+
+	result := map[string]interface{}{}
+
+	type Query struct {
+		Query string                   `json:"query"`
+		Rows  []map[string]interface{} `json:"rows,omitempty"`
+		Args  []interface{}            `json:"args,omitempty"`
+		Error string                   `json:"error,omitempty"`
+		Code  int                      `json:"code,omitempty"`
+	}
+
+	queries := []Query{}
+
+	var (
+		db   *sqlx.DB
+		rows *sqlx.Rows
+	)
+
+	for _, query := range m.config.Queries {
+
+		args := []interface{}{}
+
+		item := Query{
+			Rows: []map[string]interface{}{},
+		}
+
+		if m.config.ReturnQueries {
+			item.Query = query.Query
+		}
+
+		if db, err = sqlx.Open("mysql", query.URL); err != nil {
+			if err, ok := err.(*mysql.MySQLError); ok {
+				item.Error = err.Message
+				item.Code = int(err.Number)
+			} else {
+				item.Error = err.Error()
+			}
+
+			goto Append
+		}
+
+		for _, arg := range query.Args {
+			var a string
+
+			if a, err = m.Interpolate(arg, data); err != nil {
+				item.Error = err.Error()
+				goto Append
+			}
+
+			args = append(args, a)
+		}
+
+		if m.config.ReturnQueries {
+			item.Args = args
+		}
+
+		// run query
+		rows, err = db.Queryx(item.Query, args...)
+		if err != nil {
+			if err, ok := err.(*mysql.MySQLError); ok {
+				item.Error = err.Message
+				item.Code = int(err.Number)
+			} else {
+				item.Error = err.Error()
+			}
+			goto Append
+		}
+
+		for rows.Next() {
+			results := make(map[string]interface{})
+			err = rows.MapScan(results)
+			if err != nil {
+				item.Error = err.Error()
+				goto Append
+			}
+			item.Rows = append(item.Rows, results)
+		}
+
+	Append:
+		queries = append(queries, item)
+	}
+	result["queries"] = queries
+
+	res = result
+	err = nil
+
+	return
 }

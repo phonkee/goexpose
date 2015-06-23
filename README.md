@@ -11,9 +11,10 @@ Builtin tasks are currently:
 * info task - information about server
 * postgres task - run queries on postgres database
 * redis task - run commands on redis
+* cassandra task - run cassandra queries
+* mysql task - task to run mysql queries
 
-I have a plan to implement other tasks with support for: memcache,
-mysql, cassandra..
+I have a plan to implement other tasks with support for: memcache, mongodb, sqlite..
 
 All these commands can accepts variables from route (gorilla mux is used).
 GOexpose has system for authorization, currently basic (username password) is implemented.
@@ -119,6 +120,17 @@ Configuration:
         }
     }
 
+Formats:
+--------
+
+http task and shell task have possibility to set format of response.
+Currently available formats are: "json", "jsonlines", "lines", "text".
+Format can be combination of multiple formats. e.g.
+    
+    "format": "json|jsonlines"
+
+First format that returns result without error will be used.
+If "text" is not found in format, it is automatically inserted to the end.
 
 Tasks:
 =====
@@ -131,31 +143,22 @@ Common configuration is:
     {
         "type": "http",
         "authorizers": []
-        "methods": ["GET"],
         "config": {},
-        "query_params": [
-            {
+        "query_params": {
+            "params: [{
                 "name": "id",
                 "regexp": "^[0-9]+$",
                 "default": "0"
-            }
-        ],
-        "return_params": true
+            }],
+            "return_params": true
+        }
     }
 
 * type - type of task (currently supported tasks "shell", "http", "info").
          I will explain all tasks later
 * authorizers - list of authorizers for given endpoint (see Authorizers)
-* methods - supported http methods (uppercased)
 * config - configuration for given task type (will describe later in each task)
-* query_params - list of query parameters accepted from url query. All used query params
-                 must be defined here
-                 * name - name of parameter ?xxx=yyy name is xxx
-                 * regexp - regular expression to accept parameter
-                 * default - default value if value is not presented or regexp match failed
-                 All query params can be used in tasks that interpolate commands
-                 in namespace "query" so if we define "xxx" param in 
-                 http task in url we can use it "http://www.google.com/?q={{.query.xxx}}
+* query_params - query params (see Query Params)
 * return_params - whether goexpose should return those params in response
 
 
@@ -166,7 +169,6 @@ Http task is task that can do external request. Task configuration is following:
 
     {
         "type": "http",
-        "path": "/some/path",
         {
             "urls": [{
                 "url": "http://127.0.0.1:8000/{{.url.id}}",
@@ -193,7 +195,7 @@ Url config:
     * method - request to url will not have the same method as request to goexpose, given method value
         will be used
     * format - format of response, if no format is given goexpose will try to read Content-Type, if application/json
-        is found format will be set to json, if format is given will be used.
+        (see Formats)
     * return_headers - whether to return response headers from url response to goexpose response
     * post_body - if goexpose should post body of goexpose request to url
 
@@ -208,18 +210,19 @@ to shell injection.
 Example:
 
     {
-        "env": {
-            "key": "value"
-        },
-        "shell": "/bin/bash",
-        "commands": [
-            {
+        "type": "shell",
+        "config": {
+            "env": {
+                "key": "value"
+            },
+            "shell": "/bin/bash",
+            "commands": [{
                 "command": "echo \"{{.url.id}}\"",
                 "chdir": "/tmp",
                 "format": "json",
                 "return_command": true
-            }
-        ]
+            }]
+        }
     }
 
 Configuration:
@@ -229,7 +232,7 @@ Configuration:
     Command has these configuration:
         * command - shell command to be run, interpolated (see Interpolation)
         * chdir - change directory before run command
-        * format - format of the response
+        * format - format of the response (see Formats)
         * return_command - whether to return command in response
     
 InfoTask:
@@ -244,20 +247,23 @@ PostgresTask:
 Run queries on postgres database. Configuration for postgres task:
 
     {
-        "url": "postgres://username:password@localhost/database",
-        "return_queries": true,
-        "queries": [{
-            "query": "SELECT * FROM product WHERE id = $1",
-            "args": [
-                "{{.url.id}}"
-            ]
-        }]
+        "type": "postgres",
+        "config": {
+            "return_queries": true,
+            "queries": [{
+                "url": "postgres://username:password@localhost/database",
+                "query": "SELECT * FROM product WHERE id = $1",
+                "args": [
+                    "{{.url.id}}"
+                ]
+            }]
+        }
     }
-
+    
 Configuration:
-* url - postgres url (passed to sql.Open)
 * return_queries - whether queries with args should be added 
 * queries - list of queries
+    * url - postgres url (passed to sql.Open, refer to https://github.com/lib/pq)
     * methods - allowed methods, if not specified all methods are allowed
     * query - sql query with placeholders $1, $2 ... (query is not interpolated!!!)
     * args - list of arguments to query - all queries are interpolated (see Interpolation).
@@ -268,20 +274,22 @@ RedisTask:
 Task that can run multiple commands on redis. Example:
 
     {
-        "address": "127.0.0.1:6379",
-        "network": "tcp",
-        "database": 1,
-        "return_queries": true,
-        "queries": [{
-            "command": "GET",
-            "args": [
-                "product:{{.url.id}}"
-            ],
-            "type": "string"
+        "type": "redis",
+        "config": {
+            "address": "127.0.0.1:6379",
+            "network": "tcp",
+            "database": 1,
+            "return_queries": true,
+            "queries": [{
+                "command": "GET",
+                "args": [
+                    "product:{{.url.id}}"
+                ],
+                "type": "string"
+            }]
         }
-        ]
     }
-
+    
 Config:
   
 * address - address to connect to (see http://godoc.org/github.com/garyburd/redigo/redis#Dial)
@@ -305,6 +313,64 @@ Config:
         * uint64
         * values
         * stringmap - map[string]string
+
+CassandraTask:
+--------------
+
+Run cassandra queries task. Example:
+
+    {
+        "type": "cassandra",
+        "config": {
+            "return_queries": true,
+            "queries": [{
+                "query": "SELECT * from user WHERE id = ?",
+                "args": [
+                    "{{.url.id}}"
+                ],
+                "cluster": [
+                    "192.168.1.1",
+                    "192.168.1.2"
+                ],
+                "keyspace": "keyspace"
+            }]
+        }
+    }
+
+Configuration:
+* return_queries - whether to return query, args in response
+* queries - list of queries configurations, query configuration:
+    * query - query with placeholders
+    * args - arguments to query which are interpolated (See interpolation)
+    * cluster - list of hosts in cluster
+    * keyspace - keyspace to use
+
+
+MySQLTask:
+----------
+
+Run mysql queries. Example:
+
+    {
+        "type": "mysql",
+        "config": {
+            "return_queries": true,
+            "queries": [{
+                "url": "user:password@localhost/dbname",
+                "query": "SELECT * FROM auth_user WHERE id = ?",
+                "args": [
+                    "{{.url.id}}"
+                ]
+            }]
+        }
+    }
+
+Configuration:
+* return_queries - whether to return query with args to response
+* queries - list of queries, query config:
+    * url - url to connect to (refer to https://github.com/go-sql-driver/mysql)
+    * query - query with placeholders
+    * args - list of arguments, every argument will be interpolated (see Interpolation)
 
 Authorizers:
 ------------
@@ -345,13 +411,9 @@ Example:
 in folder example/ there is complete example for all tasks.
 
 
-
-
-TODO:
+@TODO:
 add tests
   
 Author:
 -------
-
 phonkee
-

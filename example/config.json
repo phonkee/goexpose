@@ -34,7 +34,8 @@
           "config": {
             "urls": [
               {
-                "url": "http://ip.jsontest.com/"
+                "url": "http://ip.jsontest.com/",
+                "format": "json"
               }
             ]
           }
@@ -58,11 +59,10 @@
         "GET": {
           "type": "postgres",
           "config": {
-            "url": "postgres://user:pass@localhost/database",
             "return_queries": true,
             "queries": [
               {
-                "methods": ["GET"],
+                "url": "postgres://user:pass@localhost/test",
                 "query": "SELECT * FROM auth_user WHERE id = $1",
                 "args": [
                   "{{.url.id}}"
@@ -90,6 +90,24 @@
                 "type": "string"
               }
             ]
+          }
+        }
+      }
+    },
+    {
+      "path": "/mysql/{id:[0-9]+}",
+      "methods": {
+        "GET": {
+          "type": "mysql",
+          "config": {
+            "return_queries": true,
+            "queries": [{
+              "url": "user:password@tcp(127.0.0.1:3306)/database",
+              "query": "SELECT * FROM auth_user WHERE id = ?",
+              "args": [
+                "{{.url.id}}"
+              ]
+            }]
           }
         }
       }
