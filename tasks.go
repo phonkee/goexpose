@@ -204,6 +204,7 @@ func (i *InfoTask) Run(r *http.Request, data map[string]interface{}) (interface{
 		Method      string   `json:"method,omitempty"`
 		Authorizers []string `json:"authorizers,omitempty"`
 		Type        string   `json:"type"`
+		Description string   `json:"description,omitempty"`
 	}
 
 	endpoints := []Item{}
@@ -215,6 +216,7 @@ func (i *InfoTask) Run(r *http.Request, data map[string]interface{}) (interface{
 			Method:      route.Method,
 			Authorizers: route.TaskConfig.Authorizers,
 			Type:        route.TaskConfig.Type,
+			Description: route.TaskConfig.Description,
 		}
 
 		endpoints = append(endpoints, item)

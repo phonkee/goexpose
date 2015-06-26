@@ -37,6 +37,7 @@ Lets see example configuration file:
             "methods": {
                 "GET": {
                     "type": "info",
+                    "description": "Info task"
                 }
             }
         }],
@@ -65,6 +66,7 @@ Configuration:
     * path - url path
     * authorizers - list of authorizers applied to this endpoint (see Authorizers)
     * methods - dictionary that maps http method to task
+        
         
 Installation:
 -------------

@@ -67,6 +67,7 @@ type TaskConfig struct {
 	Authorizers []string        `json:"authorizers"`
 	Config      json.RawMessage `json:"config"`
 	QueryParams *QueryParams    `json:"query_params"`
+	Description string          `json:"description"`
 }
 
 type EndpointConfig struct {
