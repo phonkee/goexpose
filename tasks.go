@@ -48,7 +48,7 @@ func (s *ShellTaskConfig) Validate() (err error) {
 }
 
 type ShellTaskConfigCommand struct {
-	Command       string `json:"command`
+	Command       string `json:"command"`
 	Chdir         string `json:"chdir"`
 	Format        string `json:"format"`
 	ReturnCommand bool   `json:"return_command"`
@@ -244,7 +244,7 @@ type HttpTaskConfigURL struct {
 	Method        string `json:"method"`
 	PostBody      bool   `json:"post_body"`
 	Format        string `json:"format"`
-	ReturnHeaders bool   `json:"return_headers`
+	ReturnHeaders bool   `json:"return_headers"`
 }
 
 /*

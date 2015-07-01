@@ -151,7 +151,7 @@ type BasicAuthorizer struct {
 }
 
 type BasicAuthorizerConfig struct {
-	Username string `json:"username`
+	Username string `json:"username"`
 	Password string `json:"password"`
 }
 

@@ -215,5 +215,5 @@ type QueryParamsConfigParam struct {
 	Default string `json:"default"`
 
 	// compiled regexp
-	compiled *regexp.Regexp `json:"-"`
+	compiled *regexp.Regexp
 }
