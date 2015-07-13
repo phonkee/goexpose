@@ -134,7 +134,6 @@ Formats body as json (map[string]interface{})
 */
 func FormatJSON(body string) (result interface{}, err error) {
 	data := map[string]interface{}{}
-
 	if err = json.Unmarshal([]byte(body), &data); err != nil {
 		return
 	}

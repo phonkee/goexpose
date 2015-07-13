@@ -149,7 +149,15 @@ func (s *ShellTask) Run(r *http.Request, data map[string]interface{}) (interface
 			results = append(results, cmdresult)
 			continue
 		} else {
-			cmdresult["out"] = strings.TrimSpace(string(out))
+
+			// format out
+			if re, f, e := Format(string(strings.TrimSpace(string(out))), command.Format); e == nil {
+				cmdresult["out"] = re
+				cmdresult["format"] = f
+			} else {
+				cmdresult["error"] = e
+			}
+
 			results = append(results, cmdresult)
 		}
 	}
