@@ -9,14 +9,25 @@ import (
 	"io/ioutil"
 	"runtime/debug"
 
-	"code.google.com/p/gorilla/mux"
-	"github.com/golang/glog"
 	"os"
 	"strings"
+
+	"code.google.com/p/gorilla/mux"
+	"github.com/golang/glog"
+	"github.com/phonkee/wheedle/errors"
 )
 
 var (
-	version = "0.1"
+	version                   = "0.2"
+	ErrResponseAlreadyWritten = errors.New("response already written")
+	logo = `
+     ______  ______  ______ __  __  ______ ______  ______  ______
+    /\  ___\/\  __ \/\  ___/\_\_\_\/\  == /\  __ \/\  ___\/\  ___\
+    \ \ \__ \ \ \/\ \ \  __\/_/\_\/\ \  _-\ \ \/\ \ \___  \ \  __\
+     \ \_____\ \_____\ \_____/\_\/\_\ \_\  \ \_____\/\_____\ \_____\
+      \/_____/\/_____/\/_____\/_/\/_/\/_/   \/_____/\/_____/\/_____/
+                                                              v ` + version
+
 )
 
 /*
@@ -47,6 +58,8 @@ type Server struct {
 Runs http server
 */
 func (s *Server) Run() (err error) {
+
+	glog.V(2).Info(logo)
 
 	var router *mux.Router
 	if router, err = s.router(); err != nil {
@@ -250,11 +263,23 @@ func (s *Server) Handle(task Tasker, authorizers Authorizers, ec *EndpointConfig
 			if status == 0 {
 				status = http.StatusOK
 			}
-			response = response.Status(status).Result(result)
+			response = response.Status(status)
+
+			if ec.RawResponse {
+				response = response.Raw(result)
+			} else {
+				response = response.Result(result)
+			}
+
 		} else {
-			// @TODO: status wat?
-			response.Status(http.StatusInternalServerError).Error(err)
-			glog.Error(err)
+			// task already wrote full response
+			if err == ErrResponseAlreadyWritten {
+				return
+			} else {
+				// @TODO: status wat?
+				response.Status(http.StatusInternalServerError).Error(err)
+				glog.Error(err)
+			}
 		}
 
 		response.Write(w, r, t)
@@ -288,8 +313,8 @@ func (s *Server) GetQueryParams(r *http.Request, ec *EndpointConfig) (result map
 
 /*
 Get environment variables
- */
-func (s *Server) GetEnv() map[string]interface{}  {
+*/
+func (s *Server) GetEnv() map[string]interface{} {
 	result := map[string]interface{}{}
 	for _, v := range os.Environ() {
 		splitted := strings.SplitN(v, "=", 2)

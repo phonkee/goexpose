@@ -14,7 +14,7 @@ Builtin tasks are currently:
 * cassandra task - run cassandra queries
 * mysql task - task to run mysql queries
 
-I have a plan to implement other tasks with support for: memcache, mongodb, sqlite..
+I have a plan to implement other tasks with support for: memcache, mongodb, sqlite, file..
 
 All these commands can accepts variables from route (gorilla mux is used).
 GOexpose has system for authorization, currently basic (username password) is implemented.
@@ -56,6 +56,7 @@ This means that Goexpose will listen on https://127.0.0.1:9900
 "endpoints" is a list of defined endpoints that goexpose responds to.
 
 Configuration:
+
 * host - host that we will listen on
 * port - port number
 * ssl - ssl settings 
@@ -66,8 +67,9 @@ Configuration:
     * path - url path
     * authorizers - list of authorizers applied to this endpoint (see Authorizers)
     * methods - dictionary that maps http method to task
+    * raw_response - if set to true, goexpose doesn't wrap task result into its json struct
         
-        
+
 Installation:
 -------------
 
@@ -176,6 +178,7 @@ Http task is task that can do external request. Task configuration is following:
     {
         "type": "http",
         {
+            "single_result": 0,
             "urls": [{
                 "url": "http://127.0.0.1:8000/{{.url.id}}",
                 "post_body": false,
@@ -193,10 +196,9 @@ Http task is task that can do external request. Task configuration is following:
     
     }
 
-Url config:
+Configuration:
 
 * urls - list of url configurations
-    
     * url - url to send request to, url is interpolated (see Interpolation)
     * method - request to url will not have the same method as request to goexpose, given method value
         will be used
@@ -204,6 +206,7 @@ Url config:
         (see Formats)
     * return_headers - whether to return response headers from url response to goexpose response
     * post_body - if goexpose should post body of goexpose request to url
+* single_result - only that result will be returned (unwrapped from array)
 
 ShellTask:
 ----------
@@ -232,6 +235,7 @@ Example:
     }
 
 Configuration:
+
 * env - custom environment variables
 * shell - shell to run command with
 * commands - list of commands to be called:
@@ -240,7 +244,8 @@ Configuration:
         * chdir - change directory before run command
         * format - format of the response (see Formats)
         * return_command - whether to return command in response
-    
+* single_result - index which command will be "unwrapped" from result array
+
 InfoTask:
 ---------
 
@@ -267,12 +272,14 @@ Run queries on postgres database. Configuration for postgres task:
     }
     
 Configuration:
+
 * return_queries - whether queries with args should be added 
 * queries - list of queries
     * url - postgres url (passed to sql.Open, refer to https://github.com/lib/pq), interpolated (see Interpolation)
     * methods - allowed methods, if not specified all methods are allowed
     * query - sql query with placeholders $1, $2 ... (query is not interpolated!!!)
     * args - list of arguments to query - all queries are interpolated (see Interpolation).
+* single_result - index which query will be "unwrapped" from result array
 
 RedisTask:
 ----------
@@ -296,7 +303,7 @@ Task that can run multiple commands on redis. Example:
         }
     }
     
-Config:
+Configuration:
   
 * address - address to connect to (see http://godoc.org/github.com/garyburd/redigo/redis#Dial)
     Default: ":6379", interpolated (see Interpolation)
@@ -319,6 +326,7 @@ Config:
         * uint64
         * values
         * stringmap - map[string]string
+* single_result - index which query will be "unwrapped" from result array
 
 CassandraTask:
 --------------
@@ -344,12 +352,14 @@ Run cassandra queries task. Example:
     }
 
 Configuration:
+
 * return_queries - whether to return query, args in response
 * queries - list of queries configurations, query configuration:
     * query - query with placeholders
     * args - arguments to query which are interpolated (See interpolation)
     * cluster - list of hosts in cluster, all args are interpolated (see Interpolation)
     * keyspace - keyspace to use, interpolated (see Interpolation)
+* single_result - index which query will be "unwrapped" from result array
 
 
 MySQLTask:
@@ -372,11 +382,39 @@ Run mysql queries. Example:
     }
 
 Configuration:
+
 * return_queries - whether to return query with args to response
 * queries - list of queries, query config:
     * url - url to connect to (refer to https://github.com/go-sql-driver/mysql), interpolated (see Interpolation)
     * query - query with placeholders
     * args - list of arguments, every argument will be interpolated (see Interpolation)
+* single_result - index which query will be "unwrapped" from result array
+
+MultiTask:
+----------
+
+Multi task gives possibility to run multiple tasks in one task. These task can be any tasks (except of embedded multi task).
+
+    {
+        "type": "multi",
+        "config": {
+            "single_result": 0,
+            "tasks": [{
+                "type": "http",
+                "config": {
+                "single_result": 0,
+                "urls": [{
+                    "url": "http://www.google.com"
+                }]
+            }
+        }]        
+    }
+
+Configuration:
+
+* single_result - index which task will be "unwrapped" from result array
+* tasks - list of tasks (these embedded tasks does not support authorizers)
+
 
 Authorizers:
 ------------
@@ -414,8 +452,8 @@ other types such as: postgres, shell, mysql..
 Example:
 --------
 
-in folder example/ there is complete example for all tasks.
-
+in folder example/ there is complete example for couple of tasks.
+You can find example [here!](example/config.json)
 
 @TODO:
 add tests

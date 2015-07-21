@@ -70,8 +70,6 @@ func GetAuthorizers(config *Config) (result Authorizers, err error) {
 	var authorizer Authorizer
 
 	for an, ac := range config.Authorizers {
-
-		_ = an
 		// validate authorizer config
 		if err = ac.Validate(); err != nil {
 			return

@@ -28,7 +28,28 @@
       }
     },
     {
+      "path": "/multi",
+      "methods": {
+        "GET": {
+          "type": "multi",
+          "config": {
+            "single_result": 0,
+            "tasks": [{
+              "type": "http",
+              "config": {
+                "single_result": 0,
+                "urls": [{
+                  "url": "http://www.google.com"
+                }]
+              }
+            }]
+          }
+        }
+      }
+    },
+    {
       "path": "/ip",
+      "raw_response": true,
       "methods": {
         "GET": {
           "type": "http",

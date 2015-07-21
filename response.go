@@ -1,4 +1,5 @@
 package goexpose
+
 /*
 Response module
 
@@ -50,12 +51,14 @@ Usage:
 		"message": "Internal Server Error",
 		"error": "error"
 	}
- */
+*/
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"time"
+
 	"github.com/golang/glog"
 )
 
@@ -79,6 +82,9 @@ type Response struct {
 
 	// json data
 	data map[string]interface{}
+
+	// raw data
+	raw *[]byte
 }
 
 /*
@@ -99,14 +105,51 @@ func (r *Response) Pretty(pretty bool) *Response {
 
 /*
 Result method adds result, it's just a shorthand to AddValue("result", result)
- */
+*/
 func (r *Response) Result(result interface{}) *Response {
 	return r.AddValue("result", result)
 }
 
 /*
+Set raw response
+param can be following:
+	nil => clear raw
+	raw is fmt.Stringer or string => convert to []byte
+	[]byte leave as it is
+	otherwise try to marshal to json []byte
+*/
+func (r *Response) Raw(raw interface{}) *Response {
+	if raw == nil {
+		r.raw = nil
+		return r
+	}
+	switch t := raw.(type) {
+	case fmt.Stringer:
+		resp := []byte(t.String())
+		r.raw = &resp
+	case string:
+		resp := []byte(t)
+		r.raw = &resp
+	case []byte:
+		r.raw = &t
+	default:
+		var (
+			body []byte
+			err  error
+		)
+		if body, err = json.Marshal(raw); err == nil {
+			r.raw = &body
+		} else {
+			r.Error(err)
+		}
+	}
+
+	return r
+}
+
+/*
 Error method adds error, it's just a shorthand to AddValue("error", err)
- */
+*/
 func (r *Response) Error(err interface{}) *Response {
 	return r.AddValue("error", err)
 }
@@ -129,8 +172,8 @@ func (r *Response) DelValue(key string) *Response {
 
 /*
 Whether response has value
- */
-func (r *Response) HasValue(key string) bool  {
+*/
+func (r *Response) HasValue(key string) bool {
 	_, ok := r.data[key]
 	return ok
 }
@@ -143,25 +186,29 @@ func (r *Response) Write(w http.ResponseWriter, req *http.Request, start ...time
 		body []byte
 	)
 
-	if r.pretty {
-		if body, err = json.MarshalIndent(r.data, "", "    "); err != nil {
-			return
-		}
-	} else {
-		if body, err = json.Marshal(r.data); err != nil {
-			return
-		}
-	}
-
 	// add headers
 	w.Header().Add("Content-Type", "application/json")
 	w.WriteHeader(r.status)
+
 	// write body
-	w.Write(body)
+	if r.raw != nil {
+		w.Write(*r.raw)
+	} else {
+		if r.pretty {
+			if body, err = json.MarshalIndent(r.data, "", "    "); err != nil {
+				return
+			}
+		} else {
+			if body, err = json.Marshal(r.data); err != nil {
+				return
+			}
+		}
+		w.Write(body)
+	}
 
 	var (
 		format string
-		args []interface{}
+		args   []interface{}
 	)
 
 	// log request

@@ -76,6 +76,7 @@ type EndpointConfig struct {
 	Methods     map[string]TaskConfig `json:"methods"`
 	Type        string                `json:"type"`
 	QueryParams *QueryParams          `json:"query_params"`
+	RawResponse bool                  `json:"raw_response"`
 }
 
 func (e *EndpointConfig) Validate() (err error) {

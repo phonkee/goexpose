@@ -27,3 +27,4 @@ _testmain.go
 *.prof
 
 .idea
+cmd/goexpose/goexpose

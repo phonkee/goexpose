@@ -16,6 +16,7 @@ import (
 	"github.com/gocql/gocql"
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
+	"github.com/phonkee/wheedle/errors"
 )
 
 func init() {
@@ -27,22 +28,37 @@ func init() {
 	RegisterTaskFactory("postgres", PostgresTaskFactory)
 	RegisterTaskFactory("redis", RedisTaskFactory)
 	RegisterTaskFactory("shell", ShellTaskFactory)
+	RegisterTaskFactory("multi", MultiTaskFactory)
 }
 
 /*
 Config for info task
 */
 type ShellTaskConfig struct {
-	Env      map[string]string         `json:"env"`
-	Shell    string                    `json:"shell"`
-	Commands []*ShellTaskConfigCommand `json:"commands"`
+	// Custom environment variables
+	Env               map[string]string         `json:"env"`
+	Shell             string                    `json:"shell"`
+	Commands          []*ShellTaskConfigCommand `json:"commands"`
+	SingleResult      *int                      `json:"single_result"`
+	singleResultIndex int                       `json:"-"`
 }
 
 func (s *ShellTaskConfig) Validate() (err error) {
+	if len(s.Commands) == 0 {
+		return errors.New("please provide at least one command")
+	}
 	for _, c := range s.Commands {
 		if err = c.Validate(); err != nil {
 			return
 		}
+	}
+	if s.SingleResult != nil {
+		s.singleResultIndex = *s.SingleResult
+		if s.singleResultIndex > len(s.Commands)-1 {
+			return errors.New("single_result out of bounds")
+		}
+	} else {
+		s.singleResultIndex = -1
 	}
 	return
 }
@@ -162,6 +178,11 @@ func (s *ShellTask) Run(r *http.Request, data map[string]interface{}) (interface
 		}
 	}
 
+	// single result
+	if s.Config.singleResultIndex != -1 {
+		return results[s.Config.singleResultIndex], http.StatusOK, nil
+	}
+
 	final := map[string]interface{}{
 		"commands": results,
 	}
@@ -244,7 +265,9 @@ Format - "json", "text", ""
 */
 
 type HttpTaskConfig struct {
-	URLs []*HttpTaskConfigURL `json:"urls"`
+	SingleResult      *int                 `json:"single_result"`
+	singleResultIndex int                  `json:"-"`
+	URLs              []*HttpTaskConfigURL `json:"urls"`
 }
 
 type HttpTaskConfigURL struct {
@@ -259,6 +282,10 @@ type HttpTaskConfigURL struct {
 Validate config
 */
 func (h *HttpTaskConfig) Validate() (err error) {
+
+	if len(h.URLs) == 0 {
+		return fmt.Errorf("http task must provide at least one url")
+	}
 	for _, url := range h.URLs {
 		url.URL = strings.TrimSpace(url.URL)
 		if url.URL == "" {
@@ -270,6 +297,15 @@ func (h *HttpTaskConfig) Validate() (err error) {
 		}
 	}
 
+	if h.SingleResult != nil {
+		h.singleResultIndex = *h.SingleResult
+		if h.singleResultIndex > len(h.URLs)-1 {
+			return errors.New("http task single_result out of bounds")
+		}
+	} else {
+		h.singleResultIndex = -1
+	}
+
 	return
 }
 
@@ -279,9 +315,6 @@ HttpTaskFactory - factory to create HttpTasks
 func HttpTaskFactory(server *Server, tc *TaskConfig) (tasks []Tasker, err error) {
 	// default config
 	config := &HttpTaskConfig{}
-	if err = config.Validate(); err != nil {
-		return
-	}
 
 	if err = json.Unmarshal(tc.Config, config); err != nil {
 		return
@@ -398,6 +431,11 @@ func (h *HttpTask) Run(r *http.Request, data map[string]interface{}) (rr interfa
 		results = append(results, result)
 	}
 
+	// return single result
+	if h.config.singleResultIndex != -1 {
+		return results[h.config.singleResultIndex], status, nil
+	}
+
 	rrr := map[string]interface{}{
 		"urls": results,
 	}
@@ -415,6 +453,9 @@ func PostgresTaskFactory(server *Server, tc *TaskConfig) (tasks []Tasker, err er
 	if err = json.Unmarshal(tc.Config, config); err != nil {
 		return
 	}
+	if err = config.Validate(); err != nil {
+		return
+	}
 	tasks = []Tasker{&PostgresTask{
 		config: config,
 	}}
@@ -423,8 +464,25 @@ func PostgresTaskFactory(server *Server, tc *TaskConfig) (tasks []Tasker, err er
 }
 
 type PostgresTaskConfig struct {
-	Queries       []*PostgresTaskConfigQuery `json:"queries"`
-	ReturnQueries bool                       `json:"return_queries"`
+	Queries           []*PostgresTaskConfigQuery `json:"queries"`
+	ReturnQueries     bool                       `json:"return_queries"`
+	SingleResult      *int                       `json:"single_result"`
+	singleResultIndex int                        `json:"-"`
+}
+
+func (p *PostgresTaskConfig) Validate() (err error) {
+	if len(p.Queries) == 0 {
+		return errors.New("please provide at least one queryS")
+	}
+	if p.SingleResult != nil {
+		p.singleResultIndex = *p.SingleResult
+		if p.singleResultIndex > len(p.Queries)-1 {
+			return errors.New("postgres task single_result out of bounds")
+		}
+	} else {
+		p.singleResultIndex = -1
+	}
+	return
 }
 
 type PostgresTaskConfigQuery struct {
@@ -533,6 +591,11 @@ func (p *PostgresTask) Run(r *http.Request, data map[string]interface{}) (interf
 		queryresults = append(queryresults, item)
 	}
 
+	// single result
+	if p.config.singleResultIndex != -1 {
+		return queryresults[p.config.singleResultIndex], http.StatusOK, nil
+	}
+
 	// final result
 	result := map[string]interface{}{
 		"queries": queryresults,
@@ -549,18 +612,33 @@ task to call commands on redis
 */
 
 type RedisTaskConfig struct {
-	Address       string                 `json:"address"`
-	Database      int                    `json:"database"`
-	Network       string                 `json:"network"`
-	Queries       []RedisTaskConfigQuery `json:"queries"`
-	ReturnQueries bool                   `json:"return_queries"`
+	Address           string                 `json:"address"`
+	Database          int                    `json:"database"`
+	Network           string                 `json:"network"`
+	Queries           []RedisTaskConfigQuery `json:"queries"`
+	ReturnQueries     bool                   `json:"return_queries"`
+	SingleResult      *int                   `json:"single_result"`
+	singleResultIndex int                    `json:"-"`
 }
 
 func (r *RedisTaskConfig) Validate() (err error) {
+
+	if len(r.Queries) == 0 {
+		return errors.New("please provide at least one query.")
+	}
 	for _, i := range r.Queries {
 		if err = i.Validate(); err != nil {
 			return
 		}
+	}
+
+	if r.SingleResult != nil {
+		r.singleResultIndex = *r.SingleResult
+		if r.singleResultIndex > len(r.Queries)-1 {
+			return errors.New("single_result out of bounds")
+		}
+	} else {
+		r.singleResultIndex = -1
 	}
 
 	return
@@ -627,15 +705,16 @@ func RedisTaskFactory(server *Server, tc *TaskConfig) (result []Tasker, err erro
 		Database: 1,
 	}
 
+	// unmarshall config
+	if err = json.Unmarshal(tc.Config, config); err != nil {
+		return
+	}
+
 	// validate config
 	if err = config.Validate(); err != nil {
 		return
 	}
 
-	// unmarshall config
-	if err = json.Unmarshal(tc.Config, config); err != nil {
-		return
-	}
 	result = []Tasker{
 		&RedisTask{
 			config: config,
@@ -721,6 +800,11 @@ func (rt *RedisTask) Run(r *http.Request, data map[string]interface{}) (rr inter
 		queries = append(queries, item)
 	}
 
+	// single result
+	if rt.config.singleResultIndex != -1 {
+		return queries[rt.config.singleResultIndex], http.StatusOK, nil
+	}
+
 	result := map[string]interface{}{
 		"queries": queries,
 	}
@@ -743,8 +827,10 @@ Run queries on cassandra cluster
 */
 
 type CassandraTaskConfig struct {
-	Queries       []CassandraTaskConfigQuery `json:"queries"`
-	ReturnQueries bool                       `json:"return_queries"`
+	Queries           []CassandraTaskConfigQuery `json:"queries"`
+	ReturnQueries     bool                       `json:"return_queries"`
+	SingleResult      *int                       `json:"single_result"`
+	singleResultIndex int                        `json:"-"`
 }
 
 /*
@@ -761,6 +847,14 @@ func (c *CassandraTaskConfig) Validate() (err error) {
 		}
 	}
 
+	if c.SingleResult != nil {
+		c.singleResultIndex = *c.SingleResult
+		if c.singleResultIndex > len(c.Queries)-1 {
+			return errors.New("single_result out of bounds")
+		}
+	} else {
+		c.singleResultIndex = -1
+	}
 	return
 }
 
@@ -892,6 +986,12 @@ func (c *CassandraTask) Run(r *http.Request, data map[string]interface{}) (res i
 	Append:
 		result.Queries = append(result.Queries, rquery)
 	}
+
+	// single result
+	if c.config.singleResultIndex != -1 {
+		return result.Queries[c.config.singleResultIndex], http.StatusOK, nil
+	}
+
 	res = result
 
 	return
@@ -904,8 +1004,10 @@ run queries on mysql
 */
 
 type MySQLTaskConfig struct {
-	ReturnQueries bool                    `json:"return_queries"`
-	Queries       []*MySQLTaskConfigQuery `json:"queries"`
+	ReturnQueries     bool                    `json:"return_queries"`
+	Queries           []*MySQLTaskConfigQuery `json:"queries"`
+	SingleResult      *int                    `json:"single_result"`
+	singleResultIndex int                     `json:"-"`
 }
 
 /*
@@ -922,6 +1024,14 @@ func (m *MySQLTaskConfig) Validate() (err error) {
 		}
 	}
 
+	if m.SingleResult != nil {
+		m.singleResultIndex = *m.SingleResult
+		if m.singleResultIndex > len(m.Queries)-1 {
+			return errors.New("single_result out of bounds")
+		}
+	} else {
+		m.singleResultIndex = -1
+	}
 	return
 }
 
@@ -1064,10 +1174,130 @@ func (m *MySQLTask) Run(r *http.Request, data map[string]interface{}) (res inter
 	Append:
 		queries = append(queries, item)
 	}
+
+	// single result
+	if m.config.singleResultIndex != -1 {
+		return queries[m.config.singleResultIndex], http.StatusOK, nil
+	}
+
 	result["queries"] = queries
 
 	res = result
 	err = nil
 
 	return
+}
+
+/*
+Factory to create task
+*/
+func MultiTaskFactory(s *Server, tc *TaskConfig) (result []Tasker, err error) {
+	config := &MultiTaskConfig{
+		Tasks: []*TaskConfig{},
+	}
+	if err = json.Unmarshal(tc.Config, config); err != nil {
+		return
+	}
+
+	if err = config.Validate(); err != nil {
+		return
+	}
+
+	mt := &MultiTask{
+		config: config,
+		tasks:  []Tasker{},
+	}
+
+	for _, mtc := range config.Tasks {
+
+		if mtc.Type == "multi" {
+			err = errors.New("multi task does not support embedded multi tasks")
+			return
+		}
+
+		// validate task config
+		if err = mtc.Validate(); err != nil {
+			return
+		}
+
+		var (
+			factory TaskFactory
+			ok      bool
+			tasks   []Tasker
+		)
+
+		if factory, ok = getTaskFactory(mtc.Type); !ok {
+			err = fmt.Errorf("task %s doesn't exist", mtc.Type)
+			return
+		}
+
+		if tasks, err = factory(s, mtc); err != nil {
+			err = fmt.Errorf("task %s returned error: %s", mtc.Type, err)
+			return
+		}
+
+		// append all tasks
+		for _, t := range tasks {
+			mt.tasks = append(mt.tasks, t)
+		}
+	}
+
+	result = []Tasker{mt}
+	return
+}
+
+type MultiTaskConfig struct {
+	Tasks             []*TaskConfig `json:"tasks"`
+	SingleResult      *int          `json:"single_result"`
+	singleResultIndex int           `json:"-"`
+}
+
+func (m *MultiTaskConfig) Validate() (err error) {
+	if len(m.Tasks) == 0 {
+		return errors.New("multi task must have at least one task")
+	}
+
+	if m.SingleResult != nil {
+		m.singleResultIndex = *m.SingleResult
+		if m.singleResultIndex > len(m.Tasks)-1 {
+			return errors.New("multi task single_result out of bounds")
+		}
+	} else {
+		m.singleResultIndex = -1
+	}
+	return
+}
+
+/*
+Multi task imlpementation
+*/
+type MultiTask struct {
+	Task
+
+	// configuration
+	config *MultiTaskConfig
+	tasks  []Tasker
+}
+
+/*
+Run multi task.
+*/
+func (m *MultiTask) Run(r *http.Request, data map[string]interface{}) (res interface{}, status int, err error) {
+
+	results := []map[string]interface{}{}
+
+	for _, tasker := range m.tasks {
+		res, status, err = tasker.Run(r, data)
+		results = append(results, map[string]interface{}{
+			"result": res,
+			"status": status,
+			"error":  err,
+		})
+	}
+
+	if m.config.singleResultIndex != -1 {
+		return results[m.config.singleResultIndex], 200, nil
+	}
+
+	return results, 200, nil
 }
