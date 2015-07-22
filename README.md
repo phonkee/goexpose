@@ -238,11 +238,10 @@ Configuration:
 * env - custom environment variables
 * shell - shell to run command with
 * commands - list of commands to be called:
-    Command has these configuration:
-        * command - shell command to be run, interpolated (see Interpolation)
-        * chdir - change directory before run command
-        * format - format of the response (see Formats)
-        * return_command - whether to return command in response
+    * command - shell command to be run, interpolated (see Interpolation)
+    * chdir - change directory before run command
+    * format - format of the response (see Formats)
+    * return_command - whether to return command in response
 * single_result - index which command will be "unwrapped" from result array
 
 InfoTask:
