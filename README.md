@@ -67,7 +67,6 @@ Configuration:
     * path - url path
     * authorizers - list of authorizers applied to this endpoint (see Authorizers)
     * methods - dictionary that maps http method to task
-    * raw_response - if set to true, goexpose doesn't wrap task result into its json struct
         
 
 Installation:
@@ -416,6 +415,59 @@ Configuration:
 * tasks - list of tasks (these embedded tasks does not support authorizers)
 
 
+FilesystemTask:
+===============
+
+Filesystem task is simple yet powerful task. It can be configured to serve single file or serve all files in directory
+with optional index page for directories.
+
+In following example we serve only one file on url /file/some. The output will be json with base encoded file content.
+
+    {
+        "path": "/file/some",
+        "methods": {
+            "GET": {
+                "type": "filesystem",
+                "config": {
+                    "file": "/tmp/file"
+                }
+            }
+        }
+    }
+
+In next example we will serve files in directory and provide index page for directories and also give possibility to 
+return raw file as response.
+
+    {
+        "path": "/static/{file:.+}",
+        "methods": {
+            "GET": {
+                "query_params": {
+                    "params": [{
+                        "name": "output",
+                        "regexp": "^raw$",
+                        "default": ""
+                    }],
+                },                
+                "config": {
+                    "file": "{{.url.file}}",
+                    "output": "{{.query.output}}",
+                    "directory": "/tmp",
+                    "index": true
+                }
+            }
+        }
+    }
+
+Configuration:
+
+* file - file to serve (interpolated)
+* directory - base directory (interpolated)
+* output - type of the output (interpolated)
+    * "raw" - returns raw file contents, otherwise it's wrapped to json
+* index - whether to serve index endpoint for directory
+
+
 Authorizers:
 ------------
 
@@ -456,7 +508,7 @@ in folder example/ there is complete example for couple of tasks.
 You can find example [here!](example/config.json)
 
 @TODO:
-add tests
+Add tasks for: sqlite, memcached, mongodb
   
 Author:
 -------

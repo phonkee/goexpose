@@ -51,6 +51,16 @@ Usage:
 		"message": "Internal Server Error",
 		"error": "error"
 	}
+
+	For responses that don't need status/message in json response, you need to call
+	StripStatusData method. This is useful for embedded Responses inside Responses.
+	So e.g.:
+
+	NewResponse(http.StatusOK).StripStatusData()
+
+	will yield to:
+
+	{}
 */
 
 import (
@@ -245,4 +255,25 @@ func (r *Response) MarshalJSON() (result []byte, err error) {
 	}
 
 	return
+}
+
+/*
+Strips status/message from data
+*/
+func (r *Response) StripStatusData() *Response {
+	delete(r.data, "status")
+	if message, ok := r.data["message"]; ok {
+		if message == http.StatusText(r.status) {
+			delete(r.data, "status")
+		}
+	}
+
+	return r
+}
+
+/*
+Updates stripped status data
+ */
+func (r *Response) UpdateStatusData() *Response {
+	return r.Status(r.status)
 }

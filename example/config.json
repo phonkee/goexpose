@@ -152,7 +152,8 @@
         "GET": {
           "type": "filesystem",
           "config": {
-            "mode": "directory",
+            "file": "{{.url.file}}",
+            "output": "{{.query.output}}",
             "directory": "/tmp",
             "index": true
           }

@@ -1,6 +1,7 @@
 package goexpose
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"net/http"
 
@@ -13,9 +14,6 @@ import (
 
 	"os"
 	"path/filepath"
-
-	"encoding/base64"
-	"net/url"
 
 	"github.com/garyburd/redigo/redis"
 	"github.com/go-sql-driver/mysql"
@@ -39,7 +37,7 @@ func init() {
 }
 
 /*
-Config for info task
+Config for shell task
 */
 type ShellTaskConfig struct {
 	// Custom environment variables
@@ -50,6 +48,9 @@ type ShellTaskConfig struct {
 	singleResultIndex int                       `json:"-"`
 }
 
+/*
+Validate validates config
+*/
 func (s *ShellTaskConfig) Validate() (err error) {
 	if len(s.Commands) == 0 {
 		return errors.New("please provide at least one command")
@@ -92,7 +93,7 @@ func NewShellTaskConfig() *ShellTaskConfig {
 }
 
 /*
-Factory for SHellTask task
+Factory for ShellTask
 */
 func ShellTaskFactory(server *Server, taskconfig *TaskConfig, ec *EndpointConfig) (tasks []Tasker, err error) {
 	config := NewShellTaskConfig()
@@ -111,7 +112,7 @@ func ShellTaskFactory(server *Server, taskconfig *TaskConfig, ec *EndpointConfig
 }
 
 /*
-ShellTask runs shel commands
+ShellTask runs shell commands
 */
 type ShellTask struct {
 	Task
@@ -133,7 +134,8 @@ func (s *ShellTask) Run(r *http.Request, data map[string]interface{}) (response 
 	// run all commands
 	for _, command := range s.Config.Commands {
 
-		cmdresp := NewResponse(http.StatusOK)
+		// strip status data from response
+		cmdresp := NewResponse(http.StatusOK).StripStatusData()
 
 		var (
 			b            string
@@ -142,7 +144,7 @@ func (s *ShellTask) Run(r *http.Request, data map[string]interface{}) (response 
 			cmd          *exec.Cmd
 		)
 		if b, e = s.Interpolate(command.Command, data); e != nil {
-			cmdresp.Status(http.StatusInternalServerError).Error(e)
+			cmdresp.Error(e)
 			goto Append
 		}
 
@@ -168,20 +170,20 @@ func (s *ShellTask) Run(r *http.Request, data map[string]interface{}) (response 
 
 		// get output
 		if out, err := cmd.Output(); err != nil {
-			cmdresp.Status(http.StatusInternalServerError).Error(err)
+			cmdresp.Error(err)
 			goto Append
 		} else {
 			// format out
 			if re, f, e := Format(string(strings.TrimSpace(string(out))), command.Format); e == nil {
 				cmdresp.Result(re).AddValue("format", f)
 			} else {
-				cmdresp.Status(http.StatusInternalServerError).Error(e)
+				cmdresp.Error(e)
 			}
 			goto Append
 		}
 
 	Append:
-		results = append(results, cmdresp)
+		results = append(results, cmdresp.StripStatusData())
 	}
 
 	// single result
@@ -241,19 +243,17 @@ func (i *InfoTask) Run(r *http.Request, data map[string]interface{}) (response *
 		Description string   `json:"description,omitempty"`
 	}
 
-	endpoints := []Item{}
+	endpoints := []*Response{}
 
 	// add tasks to result
 	for _, route := range i.routes {
-		item := Item{
-			Path:        route.Path,
-			Method:      route.Method,
-			Authorizers: route.TaskConfig.Authorizers,
-			Type:        route.TaskConfig.Type,
-			Description: route.TaskConfig.Description,
-		}
-
-		endpoints = append(endpoints, item)
+		r := NewResponse(http.StatusOK)
+		r.AddValue("path", route.Path)
+		r.AddValue("method", route.Method)
+		r.AddValue("authorizers", route.TaskConfig.Authorizers)
+		r.AddValue("type", route.TaskConfig.Type)
+		r.AddValue("description", route.TaskConfig.Description)
+		endpoints = append(endpoints, r.StripStatusData())
 	}
 
 	data["endpoints"] = endpoints
@@ -271,9 +271,11 @@ Format - "json", "text", ""
 */
 
 type HttpTaskConfig struct {
-	SingleResult      *int                 `json:"single_result"`
-	singleResultIndex int                  `json:"-"`
-	URLs              []*HttpTaskConfigURL `json:"urls"`
+	URLs         []*HttpTaskConfigURL `json:"urls"`
+	SingleResult *int                 `json:"single_result"`
+
+	// computed property
+	singleResultIndex int `json:"-"`
 }
 
 type HttpTaskConfigURL struct {
@@ -362,12 +364,16 @@ func (h *HttpTask) Run(r *http.Request, data map[string]interface{}) (response *
 
 	for _, url := range h.config.URLs {
 
-		ir := NewResponse(http.StatusOK)
+		ir := NewResponse(http.StatusOK).StripStatusData()
 
 		client := &http.Client{}
-		var req *http.Request
-
-		var body io.Reader
+		var (
+			format   string
+			req      *http.Request
+			resp     *http.Response
+			respbody []byte
+			body     io.Reader
+		)
 
 		if url.PostBody && r.Body != nil {
 			body = r.Body
@@ -382,29 +388,23 @@ func (h *HttpTask) Run(r *http.Request, data map[string]interface{}) (response *
 
 		var b string
 		if b, err = h.Interpolate(url.URL, data); err != nil {
-			ir.Status(http.StatusInternalServerError).Error(err)
-			results = append(results, ir)
-			continue
+			ir.Error(err)
+			goto Append
 		}
 
 		if req, err = http.NewRequest(method, b, body); err != nil {
-			ir.Status(http.StatusInternalServerError).Error(err)
-			results = append(results, ir)
-			continue
+			ir.Error(err)
+			goto Append
 		}
 
-		var resp *http.Response
 		if resp, err = client.Do(req); err != nil {
-			ir.Status(http.StatusInternalServerError).Error(err)
-			results = append(results, ir)
-			continue
+			ir.Error(err)
+			goto Append
 		}
 
-		var respbody []byte
 		if respbody, err = ioutil.ReadAll(resp.Body); err != nil {
-			ir.Status(http.StatusInternalServerError).Error(err)
-			results = append(results, ir)
-			continue
+			ir.Error(err)
+			goto Append
 		}
 
 		// prepare response
@@ -416,7 +416,7 @@ func (h *HttpTask) Run(r *http.Request, data map[string]interface{}) (response *
 		}
 
 		// get format(if available)
-		format := url.Format
+		format = url.Format
 
 		// try to guess json
 		if !HasFormat(format, "json") {
@@ -434,12 +434,13 @@ func (h *HttpTask) Run(r *http.Request, data map[string]interface{}) (response *
 			ir.Error(e)
 		}
 
+	Append:
 		results = append(results, ir)
 	}
 
 	// return single result
 	if h.config.singleResultIndex != -1 {
-		response = results[h.config.singleResultIndex]
+		response.Result(results[h.config.singleResultIndex])
 	} else {
 		response.Result(results)
 	}
@@ -512,60 +513,49 @@ Run postgres task
 func (p *PostgresTask) Run(r *http.Request, data map[string]interface{}) (response *Response) {
 
 	response = NewResponse(http.StatusOK)
-
-	type Item struct {
-		Error     string                   `json:"error,omitempty"`
-		ErrorCode string                   `json:"error_code,omitempty"`
-		Rows      []map[string]interface{} `json:"rows,omitempty"`
-		Query     string                   `json:"query,omitempty"`
-		Args      []interface{}            `json:"args,omitempty"`
-	}
-	queryresults := []Item{}
+	queryresults := []*Response{}
 
 	for _, query := range p.config.Queries {
 
-		item := Item{}
+		qresponse := NewResponse(http.StatusOK).StripStatusData()
+
 		var (
-			err error
-			url string
+			args []interface{}
+			db   *sqlx.DB
+			err  error
+			url  string
+			rows *sqlx.Rows
+			Rows []map[string]interface{}
+
+			errq error
 		)
 		if url, err = p.Interpolate(query.URL, data); err != nil {
-			item.Error = err.Error()
-			queryresults = append(queryresults, item)
-			continue
+			qresponse.Error(err)
+			goto Append
 		}
 
 		// interpolate all args
-		args := []interface{}{}
+		args = []interface{}{}
 		for _, arg := range query.Args {
 			interpolated, e := p.Interpolate(arg, data)
 			if e != nil {
-				item.Error = e.Error()
-				queryresults = append(queryresults, item)
-				continue
+				qresponse.Error(e)
+				goto Append
 			}
 			args = append(args, interpolated)
 		}
 
 		// add query with args to response?
 		if p.config.ReturnQueries {
-			item.Query = query.Query
-			item.Args = args
+			qresponse.AddValue("query", query.Query).AddValue("args", args)
 		}
 
-		var (
-			rows *sqlx.Rows
-			errq error
-		)
-
-		db, err := sqlx.Connect("postgres", url)
-		if err != nil {
+		if db, err = sqlx.Connect("postgres", url); err != nil {
 
 			if err, ok := err.(*pq.Error); ok {
-				item.ErrorCode = err.Code.Name()
+				qresponse.AddValue("error_code", err.Code.Name())
 			}
-
-			item.Error = err.Error()
+			qresponse.Error(err)
 			goto Append
 		}
 
@@ -573,29 +563,31 @@ func (p *PostgresTask) Run(r *http.Request, data map[string]interface{}) (respon
 		rows, errq = db.Queryx(query.Query, args...)
 		if errq != nil {
 			if errq, ok := errq.(*pq.Error); ok {
-				item.ErrorCode = errq.Code.Name()
+				qresponse.AddValue("error_code", errq.Code.Name())
 			}
-
-			item.Error = errq.Error()
+			qresponse.Error(errq)
 			goto Append
 		}
+
+		Rows = []map[string]interface{}{}
 
 		for rows.Next() {
 			results := make(map[string]interface{})
 			err = rows.MapScan(results)
 			if err != nil {
 				if err, ok := err.(*pq.Error); ok {
-					item.ErrorCode = err.Code.Name()
+					qresponse.AddValue("error_code", err.Code.Name())
 				}
-
-				item.Error = err.Error()
+				qresponse.Error(err)
 				goto Append
 			}
-			item.Rows = append(item.Rows, results)
+
+			Rows = append(Rows, results)
 		}
+		qresponse.Result(Rows)
 
 	Append:
-		queryresults = append(queryresults, item)
+		queryresults = append(queryresults, qresponse)
 	}
 
 	// single result
@@ -740,13 +732,6 @@ func (rt *RedisTask) Run(r *http.Request, data map[string]interface{}) (response
 
 	response = NewResponse(http.StatusOK)
 
-	type Item struct {
-		Error   string        `json:"error,omitempty"`
-		Result  interface{}   `json:"result,omitempty"`
-		Command string        `json:"command,omitempty"`
-		Args    []interface{} `json:"args,omitempty"`
-	}
-
 	var (
 		address string
 		err     error
@@ -762,19 +747,20 @@ func (rt *RedisTask) Run(r *http.Request, data map[string]interface{}) (response
 		return
 	}
 
-	queries := []Item{}
+	queries := []*Response{}
 
 	var (
 		reply interface{}
 		grr   interface{}
 	)
 	for _, query := range rt.config.Queries {
-		item := Item{}
+		qr := NewResponse(http.StatusOK).StripStatusData()
+
 		args := []interface{}{}
 		for _, arg := range query.Args {
 			var ia string
 			if ia, err = rt.Interpolate(arg, data); err != nil {
-				item.Error = err.Error()
+				qr.Error(err)
 				goto AddItem
 			}
 			args = append(args, ia)
@@ -782,30 +768,30 @@ func (rt *RedisTask) Run(r *http.Request, data map[string]interface{}) (response
 
 		// return full query?
 		if rt.config.ReturnQueries {
-			item.Command = query.Command
-			item.Args = args
+			qr.AddValue("command", query.Command)
+			qr.AddValue("args", args)
 		}
 
 		if reply, err = conn.Do(query.Command, args...); err != nil {
-			item.Error = err.Error()
+			qr.Error(err)
 			goto AddItem
 		}
 
 		// not found (not nice but..)
 		if reply == nil {
-			item.Error = "404"
+			qr.Error(errors.New("not found"))
 			goto AddItem
 		}
 
 		if grr, err = rt.GetReply(reply, query); err != nil {
-			item.Error = err.Error()
+			qr.Error(err)
 			goto AddItem
 		}
 
-		item.Result = grr
+		qr.Result(grr)
 
 	AddItem:
-		queries = append(queries, item)
+		queries = append(queries, qr)
 	}
 
 	// single result
@@ -923,59 +909,50 @@ func (c *CassandraTask) Run(r *http.Request, data map[string]interface{}) (respo
 
 	response = NewResponse(http.StatusOK)
 
-	type ResultQuery struct {
-		Query  string                   `json:"query,omitempty"`
-		Args   []interface{}            `json:"args,omitempty"`
-		Error  error                    `json:"error"`
-		Result []map[string]interface{} `json:"result"`
-	}
-
-	type Result struct {
-		Queries []ResultQuery `json:"queries"`
-	}
-
-	result := &Result{
-		Queries: []ResultQuery{},
-	}
-
-	var err error
+	queries := []*Response{}
 
 	for _, query := range c.config.Queries {
 		args := []interface{}{}
 
-		rquery := ResultQuery{
-			Result: []map[string]interface{}{},
-		}
+		var (
+			Result  []map[string]interface{}
+			cluster *gocql.ClusterConfig
+			session *gocql.Session
+			err     error
+		)
+
+		qr := NewResponse(http.StatusOK).StripStatusData()
 
 		chosts := []string{}
 		for _, i := range query.Cluster {
 			var chost string
 			if chost, err = c.Interpolate(i, data); err != nil {
-				return
+				qr.Error(err)
+				goto Append
 			}
 			chosts = append(chosts, chost)
 		}
 
 		// instantiate cluster
-		cluster := gocql.NewCluster(chosts...)
+		cluster = gocql.NewCluster(chosts...)
 		if cluster.Keyspace, err = c.Interpolate(query.Keyspace, data); err != nil {
-			return
+			qr.Error(err)
+			goto Append
 		}
 
-		session, err := cluster.CreateSession()
-		if err != nil {
-			rquery.Error = err
+		if session, err = cluster.CreateSession(); err != nil {
+			qr.Error(err)
 			goto Append
 		}
 
 		if c.config.ReturnQueries {
-			rquery.Query = query.Query
+			qr.AddValue("query", query.Query)
 		}
 
 		for _, arg := range query.Args {
 			final, err := c.Interpolate(arg, data)
 			if err != nil {
-				rquery.Error = err
+				qr.Error(err)
 				goto Append
 			} else {
 				args = append(args, final)
@@ -983,26 +960,27 @@ func (c *CassandraTask) Run(r *http.Request, data map[string]interface{}) (respo
 		}
 
 		if c.config.ReturnQueries {
-			rquery.Args = args
+			qr.AddValue("args", args)
 		}
 
 		// slicemap to result
-		if rquery.Result, err = session.Query(query.Query, args...).Iter().SliceMap(); err != nil {
-			rquery.Error = err
+		if Result, err = session.Query(query.Query, args...).Iter().SliceMap(); err != nil {
+			qr.Error(err)
 			goto Append
 		} else {
+			qr.Result(Result)
 			goto Append
 		}
 
 	Append:
-		result.Queries = append(result.Queries, rquery)
+		queries = append(queries, qr)
 	}
 
 	// single result
 	if c.config.singleResultIndex != -1 {
-		response.Result(result.Queries[c.config.singleResultIndex])
+		response.Result(queries[c.config.singleResultIndex])
 	} else {
-		response.Result(result)
+		response.Result(queries)
 	}
 
 	return
@@ -1101,15 +1079,7 @@ func (m *MySQLTask) Run(r *http.Request, data map[string]interface{}) (response 
 
 	response = NewResponse(http.StatusOK)
 
-	type Query struct {
-		Query string                   `json:"query"`
-		Rows  []map[string]interface{} `json:"rows,omitempty"`
-		Args  []interface{}            `json:"args,omitempty"`
-		Error string                   `json:"error,omitempty"`
-		Code  int                      `json:"code,omitempty"`
-	}
-
-	queries := []Query{}
+	queries := []*Response{}
 
 	var (
 		db   *sqlx.DB
@@ -1119,30 +1089,29 @@ func (m *MySQLTask) Run(r *http.Request, data map[string]interface{}) (response 
 
 	for _, query := range m.config.Queries {
 
+		var (
+			Rows []map[string]interface{}
+		)
+
 		args := []interface{}{}
 
-		item := Query{
-			Rows: []map[string]interface{}{},
-		}
+		qr := NewResponse(http.StatusOK).StripStatusData()
 
 		var url string
 		if url, err = m.Interpolate(query.URL, data); err != nil {
-			item.Error = err.Error()
+			qr.Error(err)
 			goto Append
 		}
 
 		if m.config.ReturnQueries {
-			item.Query = query.Query
+			qr.AddValue("query", query.Query)
 		}
 
 		if db, err = sqlx.Open("mysql", url); err != nil {
+			qr.Error(err.Error())
 			if err, ok := err.(*mysql.MySQLError); ok {
-				item.Error = err.Message
-				item.Code = int(err.Number)
-			} else {
-				item.Error = err.Error()
+				qr.AddValue("error_code", err.Number)
 			}
-
 			goto Append
 		}
 
@@ -1150,7 +1119,7 @@ func (m *MySQLTask) Run(r *http.Request, data map[string]interface{}) (response 
 			var a string
 
 			if a, err = m.Interpolate(arg, data); err != nil {
-				item.Error = err.Error()
+				qr.Error(err)
 				goto Append
 			}
 
@@ -1158,33 +1127,33 @@ func (m *MySQLTask) Run(r *http.Request, data map[string]interface{}) (response 
 		}
 
 		if m.config.ReturnQueries {
-			item.Args = args
+			qr.AddValue("args", args)
 		}
 
 		// run query
-		rows, err = db.Queryx(item.Query, args...)
+		rows, err = db.Queryx(query.Query, args...)
 		if err != nil {
+			qr.Error(err)
 			if err, ok := err.(*mysql.MySQLError); ok {
-				item.Error = err.Message
-				item.Code = int(err.Number)
-			} else {
-				item.Error = err.Error()
+				qr.AddValue("error_code", err.Number)
 			}
 			goto Append
 		}
 
+		Rows = []map[string]interface{}{}
 		for rows.Next() {
 			results := make(map[string]interface{})
 			err = rows.MapScan(results)
 			if err != nil {
-				item.Error = err.Error()
+				qr.Error(err)
 				goto Append
 			}
-			item.Rows = append(item.Rows, results)
+			Rows = append(Rows, results)
 		}
+		qr.Result(Rows)
 
 	Append:
-		queries = append(queries, item)
+		queries = append(queries, qr)
 	}
 
 	// single result
@@ -1312,176 +1281,118 @@ func (m *MultiTask) Run(r *http.Request, data map[string]interface{}) (response 
 }
 
 /*
-Filesystem task gives possibility to serve files. It operates in two modes: file, directory.
-	file:
-		serves single file
-	directory:
-		serves all files in folder
+Filesystem task gives possibility to serve files.
 */
 
 func NewFilesystemConfig() *FilesystemConfig {
-	return &FilesystemConfig{
-		Mode:       "file",
-		FileMuxVar: "file",
-	}
+	return &FilesystemConfig{}
 }
 
 type FilesystemConfig struct {
-	Mode       string `json:"mode"`
-	File       string `json:"file"`
-	Directory  string `json:"directory"`
-	Index      bool   `json:"index"`
-	FileMuxVar string `json:"file_url_var"`
+	File      string `json:"file"`
+	Output    string `json:"output"`
+	Directory string `json:"directory"`
+	Index     bool   `json:"index"`
 }
 
-/*
-@TODO: add additional checks (file/directory existency)
-*/
 func (f *FilesystemConfig) Validate() (err error) {
 	// cleanup strings
-	f.Mode = strings.TrimSpace(f.Mode)
 	f.File = strings.TrimSpace(f.File)
 	f.Directory = strings.TrimSpace(f.Directory)
-	f.FileMuxVar = strings.TrimSpace(f.FileMuxVar)
-
-	// perform validations
-	switch f.Mode {
-	case "file":
-		if f.File == "" {
-			return errors.New("please provide file")
-		}
-		if f.Directory != "" {
-			return errors.New("directory set for mode file")
-		}
-	case "directory":
-		if f.File != "" {
-			return errors.New("file set for mode directory")
-		}
-		if f.Directory == "" {
-			return errors.New("please provide directory")
-		}
-		if f.FileMuxVar == "" {
-			return errors.New("please provide valid file_url_var")
-		}
-
-		// get absolute path
-		if f.Directory, err = filepath.Abs(f.Directory); err != nil {
-			return fmt.Errorf("directory abs returned error %s", err)
-		}
-
-		// check directory
-		if _, err = ioutil.ReadDir(f.Directory); err != nil {
-			return fmt.Errorf("directory error: %s", err)
-		}
-	default:
-		return fmt.Errorf("unknown filesystem mode: %s", f.Mode)
-	}
 	return
 }
 
 /*
-FilesystemFileTask
+FilesystemTask
 	serve single file
 */
-type FilesystemFileTask struct {
+type FilesystemTask struct {
 	Task
 	config   *FilesystemConfig
-	endpoint *EndpointConfig
-	server   *Server
-}
-
-func (f *FilesystemFileTask) Run(r *http.Request, data map[string]interface{}) (response *Response) {
-	return NewResponse(http.StatusOK)
 }
 
 /*
-FilesystemDirectoryTask
-	serve single file
-*/
-type FilesystemDirectoryTask struct {
-	Task
-	config   *FilesystemConfig
-	endpoint *EndpointConfig
-	server   *Server
-}
-
-func (f *FilesystemDirectoryTask) Run(r *http.Request, data map[string]interface{}) (response *Response) {
+Run method for FilesystemTask
+ */
+func (f *FilesystemTask) Run(r *http.Request, data map[string]interface{}) (response *Response) {
 
 	var (
-		muxvar string
-		ok     bool
+		directory string
+		err      error
+		filename string
+		finfo    os.FileInfo
+		output   string
 	)
 
 	response = NewResponse(http.StatusOK)
 
-	urldata := data["url"].(map[string]string)
+	_ = err
 
-	if muxvar, ok = urldata[f.config.FileMuxVar]; !ok {
-		return response.Status(http.StatusInternalServerError).Error(fmt.Errorf("file_url_var %s not found", f.config.FileMuxVar))
+	// interpolate filename
+	if filename, err = f.Interpolate(f.config.File, data); err != nil {
+		return response.Status(http.StatusInternalServerError).Error(err)
 	}
 
-	final := filepath.Join(f.config.Directory, muxvar)
-	_ = final
+	// interpolate directory
+	if directory, err = f.Interpolate(f.config.Directory, data); err != nil {
+		return response.Status(http.StatusInternalServerError).Error(err)
+	}
 
-	var (
-		err error
-		fi  os.FileInfo
-	)
-	if fi, err = os.Stat(final); err != nil {
+	full := filepath.Join(directory, filename)
+
+	if finfo, err = os.Stat(full); err != nil {
 		return response.Status(http.StatusNotFound)
 	}
 
-	if fi.IsDir() {
+	// it's directory
+	if finfo.IsDir() {
 		if !f.config.Index {
 			return response.Status(http.StatusNotFound)
 		}
 
-		var items []os.FileInfo
-		if items, err = ioutil.ReadDir(final); err != nil {
-			return response.Status(http.StatusInternalServerError)
+		var (
+			items []os.FileInfo
+			qr    *Response
+		)
+		if items, err = ioutil.ReadDir(full); err != nil {
+			return response.Status(http.StatusInternalServerError).Error(err)
 		}
 
-		result := []map[string]interface{}{}
-
-		for _, item := range items {
-
-			var u *url.URL
-			if u, err = f.server.Router.Get(f.endpoint.RouteName()).URL(f.config.FileMuxVar, filepath.Join(muxvar, item.Name())); err != nil {
-				return response.Status(http.StatusInternalServerError)
-			}
-
-			ri := map[string]interface{}{
-				"name":   u.Path,
-				"is_dir": item.IsDir(),
-			}
-			result = append(result, ri)
+		// prepare results
+		results := make([]*Response, len(items))
+		for i, item := range items {
+			qr = NewResponse(http.StatusOK).StripStatusData()
+			qr.Result(filepath.Join(full, item.Name())).AddValue("is_dir", item.IsDir())
+			results[i] = qr
 		}
 
-		return response.Result(result)
+		return response.Result(results)
 	}
-
-	// is file so serve it please
 
 	var contents []byte
-	if contents, err = ioutil.ReadFile(final); err != nil {
-		return response.Status(http.StatusInternalServerError)
+	if contents, err = ioutil.ReadFile(full); err != nil {
+		return response.Status(http.StatusInternalServerError).Error(err)
 	}
 
-	//	mode := r.URL.Query().Get("mode")
-	//	if mode == "raw" {
-	//	}
+	if output, err = f.Interpolate(f.config.Output, data); err != nil {
+		return response.Error(err).Status(http.StatusInternalServerError)
+	}
+
+	// raw body
+	if strings.TrimSpace(strings.ToLower(output)) == "raw" {
+		return response.Raw(contents)
+	}
 
 	b64content := base64.StdEncoding.EncodeToString(contents)
-	_, ff := filepath.Split(final)
+	_, ff := filepath.Split(full)
 
-	return response.Result(map[string]string{
-		"name":     ff,
-		"contents": b64content,
-	})
+	return response.Result(b64content).AddValue("filename", ff)
 }
 
+/*
+Factory to create filesystem tasks
+*/
 func FilesystemFactory(s *Server, tc *TaskConfig, ec *EndpointConfig) (result []Tasker, err error) {
-	var task Tasker
 
 	config := NewFilesystemConfig()
 	if err = json.Unmarshal(tc.Config, config); err != nil {
@@ -1492,20 +1403,8 @@ func FilesystemFactory(s *Server, tc *TaskConfig, ec *EndpointConfig) (result []
 		return
 	}
 
-	switch config.Mode {
-	case "file":
-		task = &FilesystemFileTask{
-			config:   config,
-			endpoint: ec,
-			server:   s,
-		}
-	case "directory":
-		task = &FilesystemDirectoryTask{
-			config:   config,
-			endpoint: ec,
-			server:   s,
-		}
-	}
-
-	return []Tasker{task}, err
+	result = []Tasker{&FilesystemTask{
+		config:   config,
+	}}
+	return
 }
