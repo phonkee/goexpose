@@ -13,6 +13,8 @@ Builtin tasks are currently:
 * redis task - run commands on redis
 * cassandra task - run cassandra queries
 * mysql task - task to run mysql queries
+* multi task - run multiple tasks
+* filesystem task - serving file(s) from filesystem
 
 I have a plan to implement other tasks with support for: memcache, mongodb, sqlite, file..
 
@@ -161,8 +163,7 @@ Common configuration is:
         }
     }
 
-* type - type of task (currently supported tasks "shell", "http", "info").
-         I will explain all tasks later
+* type - type of task.
 * authorizers - list of authorizers for given endpoint (see Authorizers)
 * config - configuration for given task type (will describe later in each task)
 * query_params - query params (see Query Params)
