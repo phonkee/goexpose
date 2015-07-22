@@ -359,7 +359,7 @@ Run method is called on request
 */
 func (h *HttpTask) Run(r *http.Request, data map[string]interface{}) (response *Response) {
 
-	results := []map[string]interface{}{}
+	results := []*Response{}
 
 	response = NewResponse(http.StatusOK)
 
@@ -367,13 +367,12 @@ func (h *HttpTask) Run(r *http.Request, data map[string]interface{}) (response *
 
 	for _, url := range h.config.URLs {
 
+		ir := NewResponse(http.StatusOK)
+
 		client := &http.Client{}
 		var req *http.Request
 
 		var body io.Reader
-
-		// prepare response
-		result := map[string]interface{}{}
 
 		if url.PostBody && r.Body != nil {
 			body = r.Body
@@ -388,37 +387,37 @@ func (h *HttpTask) Run(r *http.Request, data map[string]interface{}) (response *
 
 		var b string
 		if b, err = h.Interpolate(url.URL, data); err != nil {
-			result["error"] = err.Error()
-			results = append(results, result)
+			ir.Status(http.StatusInternalServerError).Error(err)
+			results = append(results, ir)
 			continue
 		}
 
 		if req, err = http.NewRequest(method, b, body); err != nil {
-			result["error"] = err.Error()
-			results = append(results, result)
+			ir.Status(http.StatusInternalServerError).Error(err)
+			results = append(results, ir)
 			continue
 		}
 
 		var resp *http.Response
 		if resp, err = client.Do(req); err != nil {
-			result["error"] = err.Error()
-			results = append(results, result)
+			ir.Status(http.StatusInternalServerError).Error(err)
+			results = append(results, ir)
 			continue
 		}
 
 		var respbody []byte
 		if respbody, err = ioutil.ReadAll(resp.Body); err != nil {
-			result["error"] = err.Error()
-			results = append(results, result)
+			ir.Status(http.StatusInternalServerError).Error(err)
+			results = append(results, ir)
 			continue
 		}
 
 		// prepare response
-		result["status"] = resp.StatusCode
+		ir.Status(resp.StatusCode)
 
 		// return headers?
 		if url.ReturnHeaders {
-			result["headers"] = resp.Header
+			ir.AddValue("headers", resp.Header)
 		}
 
 		// get format(if available)
@@ -435,18 +434,17 @@ func (h *HttpTask) Run(r *http.Request, data map[string]interface{}) (response *
 		}
 
 		if re, f, e := Format(string(respbody), url.Format); e == nil {
-			result["response"] = re
-			result["format"] = f
+			ir.Result(re).AddValue("format", f)
 		} else {
-			result["error"] = e
+			ir.Error(e)
 		}
 
-		results = append(results, result)
+		results = append(results, ir)
 	}
 
 	// return single result
 	if h.config.singleResultIndex != -1 {
-		response.Result(results[h.config.singleResultIndex])
+		response = results[h.config.singleResultIndex]
 	} else {
 		response.Result(results)
 	}
