@@ -416,7 +416,7 @@ Configuration:
 
 
 FilesystemTask:
-===============
+---------------
 
 Filesystem task is simple yet powerful task. It can be configured to serve single file or serve all files in directory
 with optional index page for directories.
