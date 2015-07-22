@@ -20,7 +20,14 @@ func main() {
 		err    error
 	)
 
+	// read config file
 	if config, err = goexpose.NewConfigFromFilename(*configVar); err != nil {
+		glog.Errorf("config error: %v", err)
+		os.Exit(1)
+	}
+
+	// change working directory to config directory
+	if err = os.Chdir(config.Directory); err != nil {
 		glog.Errorf("config error: %v", err)
 		os.Exit(1)
 	}

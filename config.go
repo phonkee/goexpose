@@ -1,14 +1,15 @@
 package goexpose
 
 import (
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
+	"path/filepath"
 	"regexp"
 	"strings"
-	"crypto/sha256"
-	"io"
 )
 
 /*
@@ -17,13 +18,20 @@ Returns filename from file
 func NewConfigFromFilename(filename string) (config *Config, err error) {
 	config = NewConfig()
 
-	var result []byte
+	var (
+		result []byte
+	)
 	if result, err = ioutil.ReadFile(filename); err != nil {
 		return
 	}
 
 	// unmarshal config
 	if err = json.Unmarshal(result, config); err != nil {
+		return
+	}
+
+	// get config dir
+	if config.Directory, err = filepath.Abs(filepath.Dir(filename)); err != nil {
 		return
 	}
 
@@ -51,6 +59,7 @@ type Config struct {
 	Authorizers map[string]*AuthorizerConfig `json:"authorizers"`
 	Endpoints   []*EndpointConfig            `json:"endpoints"`
 	ReloadEnv   bool                         `json:"reload_env"`
+	Directory   string                       `json:"-"`
 }
 
 /*
@@ -102,7 +111,7 @@ func (e *EndpointConfig) Validate() (err error) {
 	return
 }
 
-func (e *EndpointConfig ) RouteName() string {
+func (e *EndpointConfig) RouteName() string {
 	hash := sha256.New()
 	io.WriteString(hash, e.Path)
 	return fmt.Sprintf("%x", hash.Sum(nil))
