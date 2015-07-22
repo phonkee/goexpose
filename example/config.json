@@ -16,6 +16,7 @@
         "GET": {
           "type": "shell",
           "config": {
+            "single_result": 0,
             "commands": [
               {
                 "chdir": "/tmp",

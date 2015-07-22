@@ -126,37 +126,35 @@ Run all commands and return results
 */
 func (s *ShellTask) Run(r *http.Request, data map[string]interface{}) (response *Response) {
 
-	results := []map[string]interface{}{}
+	results := []*Response{}
 
 	response = NewResponse(http.StatusOK)
 
 	// run all commands
 	for _, command := range s.Config.Commands {
 
-		cmdresult := map[string]interface{}{
-			"out":   nil,
-			"error": nil,
-		}
+		cmdresp := NewResponse(http.StatusOK)
 
 		var (
-			b string
-			e error
+			b            string
+			e            error
+			finalCommand string
+			cmd          *exec.Cmd
 		)
 		if b, e = s.Interpolate(command.Command, data); e != nil {
-			cmdresult["error"] = e
-			results = append(results, cmdresult)
-			continue
+			cmdresp.Status(http.StatusInternalServerError).Error(e)
+			goto Append
 		}
 
-		finalCommand := b
+		finalCommand = b
 
 		// show command in result
 		if command.ReturnCommand {
-			cmdresult["command"] = finalCommand
+			cmdresp.AddValue("command", finalCommand)
 		}
 
 		// run command
-		cmd := exec.Command(s.Config.Shell, "-c", finalCommand)
+		cmd = exec.Command(s.Config.Shell, "-c", finalCommand)
 
 		// change directory if needed
 		if command.Chdir != "" {
@@ -170,30 +168,27 @@ func (s *ShellTask) Run(r *http.Request, data map[string]interface{}) (response 
 
 		// get output
 		if out, err := cmd.Output(); err != nil {
-			cmdresult["error"] = err
-			results = append(results, cmdresult)
-			continue
+			cmdresp.Status(http.StatusInternalServerError).Error(err)
+			goto Append
 		} else {
-
 			// format out
 			if re, f, e := Format(string(strings.TrimSpace(string(out))), command.Format); e == nil {
-				cmdresult["out"] = re
-				cmdresult["format"] = f
+				cmdresp.Result(re).AddValue("format", f)
 			} else {
-				cmdresult["error"] = e
+				cmdresp.Status(http.StatusInternalServerError).Error(e)
 			}
-
-			results = append(results, cmdresult)
+			goto Append
 		}
+
+	Append:
+		results = append(results, cmdresp)
 	}
 
 	// single result
 	if s.Config.singleResultIndex != -1 {
 		response.Result(results[s.Config.singleResultIndex])
 	} else {
-		response.Result(map[string]interface{}{
-			"commands": results,
-		})
+		response.Result(results)
 	}
 
 	return
@@ -752,11 +747,9 @@ func (rt *RedisTask) Run(r *http.Request, data map[string]interface{}) (response
 		Args    []interface{} `json:"args,omitempty"`
 	}
 
-
-
 	var (
 		address string
-		err error
+		err     error
 	)
 	if address, err = rt.Interpolate(rt.config.Address, data); err != nil {
 		response.Error(err)
@@ -1121,7 +1114,7 @@ func (m *MySQLTask) Run(r *http.Request, data map[string]interface{}) (response 
 	var (
 		db   *sqlx.DB
 		rows *sqlx.Rows
-		err error
+		err  error
 	)
 
 	for _, query := range m.config.Queries {
@@ -1432,7 +1425,7 @@ func (f *FilesystemDirectoryTask) Run(r *http.Request, data map[string]interface
 
 	var (
 		err error
-		fi os.FileInfo
+		fi  os.FileInfo
 	)
 	if fi, err = os.Stat(final); err != nil {
 		return response.Status(http.StatusNotFound)
