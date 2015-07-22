@@ -9,7 +9,7 @@ import (
 /*
 TaskFactory returns instance of task by server and config
  */
-type TaskFactory func(server *Server, config *TaskConfig) ([]Tasker, error)
+type TaskFactory func(server *Server, config *TaskConfig, ec *EndpointConfig) ([]Tasker, error)
 
 /*
 Tasker interface
@@ -20,7 +20,7 @@ type Tasker interface {
 	Path() string
 
 	// Run method is called on http request
-	Run(r *http.Request, vars map[string]interface{}) (interface{}, int, error)
+	Run(r *http.Request, vars map[string]interface{}) *Response
 }
 
 /*

@@ -52,6 +52,9 @@ type Server struct {
 
 	// Version
 	Version string
+
+	// Router
+	Router *mux.Router
 }
 
 /*
@@ -61,8 +64,7 @@ func (s *Server) Run() (err error) {
 
 	glog.V(2).Info(logo)
 
-	var router *mux.Router
-	if router, err = s.router(); err != nil {
+	if s.Router, err = s.router(); err != nil {
 		return
 	}
 
@@ -72,12 +74,12 @@ func (s *Server) Run() (err error) {
 	// ssl version
 	if s.Config.SSL != nil {
 		glog.Infof("Start listen on https://%s", listen)
-		if err = http.ListenAndServeTLS(listen, s.Config.SSL.Cert, s.Config.SSL.Key, router); err != nil {
+		if err = http.ListenAndServeTLS(listen, s.Config.SSL.Cert, s.Config.SSL.Key, s.Router); err != nil {
 			return
 		}
 	} else {
 		glog.Infof("Start listen on http://%s", listen)
-		if err = http.ListenAndServe(listen, router); err != nil {
+		if err = http.ListenAndServe(listen, s.Router); err != nil {
 			return
 		}
 	}
@@ -104,7 +106,7 @@ func (s *Server) router(ignored ...string) (router *mux.Router, err error) {
 			route.TaskConfig.Type, route.Path, route.Method)
 
 		// register route to router
-		router.HandleFunc(route.Path, s.Handle(route.Task, route.Authorizers, route.EndpointConfig, route.TaskConfig)).Methods(route.Method)
+		router.HandleFunc(route.Path, s.Handle(route.Task, route.Authorizers, route.EndpointConfig, route.TaskConfig)).Methods(route.Method).Name(route.EndpointConfig.RouteName())
 	}
 
 	return
@@ -165,7 +167,7 @@ Outer:
 				return
 			}
 
-			if tasks, err = factory(s, &taskconf); err != nil {
+			if tasks, err = factory(s, &taskconf, econfig); err != nil {
 				err = fmt.Errorf("task %s returned error: %s", taskconf.Type, err)
 				return
 			}
@@ -243,7 +245,7 @@ func (s *Server) Handle(task Tasker, authorizers Authorizers, ec *EndpointConfig
 		}
 
 		// prepare response
-		response := NewResponse(http.StatusOK).Pretty(s.Config.PrettyJson)
+		response := task.Run(r, params)
 
 		// should i add params
 		if ec.QueryParams != nil {
@@ -259,30 +261,10 @@ func (s *Server) Handle(task Tasker, authorizers Authorizers, ec *EndpointConfig
 			}
 		}
 
-		if result, status, err := task.Run(r, params); err == nil {
-			if status == 0 {
-				status = http.StatusOK
-			}
-			response = response.Status(status)
-
-			if ec.RawResponse {
-				response = response.Raw(result)
-			} else {
-				response = response.Result(result)
-			}
-
-		} else {
-			// task already wrote full response
-			if err == ErrResponseAlreadyWritten {
-				return
-			} else {
-				// @TODO: status wat?
-				response.Status(http.StatusInternalServerError).Error(err)
-				glog.Error(err)
-			}
-		}
-
 		response.Write(w, r, t)
+
+
+
 	}
 }
 

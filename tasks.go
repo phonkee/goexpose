@@ -11,6 +11,12 @@ import (
 	"io/ioutil"
 	"strings"
 
+	"os"
+	"path/filepath"
+
+	"encoding/base64"
+	"net/url"
+
 	"github.com/garyburd/redigo/redis"
 	"github.com/go-sql-driver/mysql"
 	"github.com/gocql/gocql"
@@ -29,6 +35,7 @@ func init() {
 	RegisterTaskFactory("redis", RedisTaskFactory)
 	RegisterTaskFactory("shell", ShellTaskFactory)
 	RegisterTaskFactory("multi", MultiTaskFactory)
+	RegisterTaskFactory("filesystem", FilesystemFactory)
 }
 
 /*
@@ -87,7 +94,7 @@ func NewShellTaskConfig() *ShellTaskConfig {
 /*
 Factory for SHellTask task
 */
-func ShellTaskFactory(server *Server, taskconfig *TaskConfig) (tasks []Tasker, err error) {
+func ShellTaskFactory(server *Server, taskconfig *TaskConfig, ec *EndpointConfig) (tasks []Tasker, err error) {
 	config := NewShellTaskConfig()
 	if err = json.Unmarshal(taskconfig.Config, config); err != nil {
 		return
@@ -117,9 +124,11 @@ type ShellTask struct {
 Run method for shell task
 Run all commands and return results
 */
-func (s *ShellTask) Run(r *http.Request, data map[string]interface{}) (interface{}, int, error) {
+func (s *ShellTask) Run(r *http.Request, data map[string]interface{}) (response *Response) {
 
 	results := []map[string]interface{}{}
+
+	response = NewResponse(http.StatusOK)
 
 	// run all commands
 	for _, command := range s.Config.Commands {
@@ -180,19 +189,20 @@ func (s *ShellTask) Run(r *http.Request, data map[string]interface{}) (interface
 
 	// single result
 	if s.Config.singleResultIndex != -1 {
-		return results[s.Config.singleResultIndex], http.StatusOK, nil
+		response.Result(results[s.Config.singleResultIndex])
+	} else {
+		response.Result(map[string]interface{}{
+			"commands": results,
+		})
 	}
 
-	final := map[string]interface{}{
-		"commands": results,
-	}
-	return final, http.StatusOK, nil
+	return
 }
 
 /*
 Factory for InfoTask task
 */
-func InfoTaskFactory(server *Server, taskconfig *TaskConfig) (tasks []Tasker, err error) {
+func InfoTaskFactory(server *Server, taskconfig *TaskConfig, ec *EndpointConfig) (tasks []Tasker, err error) {
 
 	// get information about all routes
 	var routes []*route
@@ -223,7 +233,7 @@ type InfoTask struct {
 /*
 InfoTask Run method.
 */
-func (i *InfoTask) Run(r *http.Request, data map[string]interface{}) (interface{}, int, error) {
+func (i *InfoTask) Run(r *http.Request, data map[string]interface{}) (response *Response) {
 	data = map[string]interface{}{
 		"version": i.version,
 	}
@@ -250,9 +260,10 @@ func (i *InfoTask) Run(r *http.Request, data map[string]interface{}) (interface{
 
 		endpoints = append(endpoints, item)
 	}
+
 	data["endpoints"] = endpoints
 
-	return data, http.StatusOK, nil
+	return NewResponse(http.StatusOK).Result(data)
 }
 
 /*
@@ -312,7 +323,7 @@ func (h *HttpTaskConfig) Validate() (err error) {
 /*
 HttpTaskFactory - factory to create HttpTasks
 */
-func HttpTaskFactory(server *Server, tc *TaskConfig) (tasks []Tasker, err error) {
+func HttpTaskFactory(server *Server, tc *TaskConfig, ec *EndpointConfig) (tasks []Tasker, err error) {
 	// default config
 	config := &HttpTaskConfig{}
 
@@ -346,11 +357,13 @@ type HttpTask struct {
 Run method is called on request
 @TODO: please refactor me!
 */
-func (h *HttpTask) Run(r *http.Request, data map[string]interface{}) (rr interface{}, status int, err error) {
+func (h *HttpTask) Run(r *http.Request, data map[string]interface{}) (response *Response) {
 
 	results := []map[string]interface{}{}
 
-	status = http.StatusOK
+	response = NewResponse(http.StatusOK)
+
+	var err error
 
 	for _, url := range h.config.URLs {
 
@@ -433,13 +446,12 @@ func (h *HttpTask) Run(r *http.Request, data map[string]interface{}) (rr interfa
 
 	// return single result
 	if h.config.singleResultIndex != -1 {
-		return results[h.config.singleResultIndex], status, nil
+		response.Result(results[h.config.singleResultIndex])
+	} else {
+		response.Result(results)
 	}
 
-	rrr := map[string]interface{}{
-		"urls": results,
-	}
-	return rrr, status, nil
+	return
 }
 
 /*
@@ -448,7 +460,7 @@ PostgresTask
 run queries on postgres database
 */
 
-func PostgresTaskFactory(server *Server, tc *TaskConfig) (tasks []Tasker, err error) {
+func PostgresTaskFactory(server *Server, tc *TaskConfig, ec *EndpointConfig) (tasks []Tasker, err error) {
 	config := &PostgresTaskConfig{}
 	if err = json.Unmarshal(tc.Config, config); err != nil {
 		return
@@ -504,7 +516,9 @@ type PostgresTask struct {
 /*
 Run postgres task
 */
-func (p *PostgresTask) Run(r *http.Request, data map[string]interface{}) (interface{}, int, error) {
+func (p *PostgresTask) Run(r *http.Request, data map[string]interface{}) (response *Response) {
+
+	response = NewResponse(http.StatusOK)
 
 	type Item struct {
 		Error     string                   `json:"error,omitempty"`
@@ -593,16 +607,12 @@ func (p *PostgresTask) Run(r *http.Request, data map[string]interface{}) (interf
 
 	// single result
 	if p.config.singleResultIndex != -1 {
-		return queryresults[p.config.singleResultIndex], http.StatusOK, nil
+		response.Result(queryresults[p.config.singleResultIndex])
+	} else {
+		response.Result(queryresults)
 	}
 
-	// final result
-	result := map[string]interface{}{
-		"queries": queryresults,
-	}
-
-	return result, http.StatusOK, nil
-
+	return
 }
 
 /*
@@ -697,7 +707,7 @@ func (r *RedisTaskConfigQuery) Validate() (err error) {
 /*
 Factory to create task instances
 */
-func RedisTaskFactory(server *Server, tc *TaskConfig) (result []Tasker, err error) {
+func RedisTaskFactory(server *Server, tc *TaskConfig, ec *EndpointConfig) (result []Tasker, err error) {
 	// address defaults to tcp
 	config := &RedisTaskConfig{
 		Address:  ":6379",
@@ -733,7 +743,9 @@ type RedisTask struct {
 /*
 Run method runs when request comes...
 */
-func (rt *RedisTask) Run(r *http.Request, data map[string]interface{}) (rr interface{}, status int, err error) {
+func (rt *RedisTask) Run(r *http.Request, data map[string]interface{}) (response *Response) {
+
+	response = NewResponse(http.StatusOK)
 
 	type Item struct {
 		Error   string        `json:"error,omitempty"`
@@ -742,15 +754,20 @@ func (rt *RedisTask) Run(r *http.Request, data map[string]interface{}) (rr inter
 		Args    []interface{} `json:"args,omitempty"`
 	}
 
-	status = http.StatusOK
 
-	var address string
+
+	var (
+		address string
+		err error
+	)
 	if address, err = rt.Interpolate(rt.config.Address, data); err != nil {
+		response.Error(err)
 		return
 	}
 
 	var conn redis.Conn
 	if conn, err = redis.Dial(rt.config.Network, address); err != nil {
+		response.Error(err)
 		return
 	}
 
@@ -802,13 +819,12 @@ func (rt *RedisTask) Run(r *http.Request, data map[string]interface{}) (rr inter
 
 	// single result
 	if rt.config.singleResultIndex != -1 {
-		return queries[rt.config.singleResultIndex], http.StatusOK, nil
+		response.Result(queries[rt.config.singleResultIndex])
+	} else {
+		response.Result(queries)
 	}
 
-	result := map[string]interface{}{
-		"queries": queries,
-	}
-	return result, status, nil
+	return
 }
 
 func (r *RedisTask) GetReply(reply interface{}, query RedisTaskConfigQuery) (interface{}, error) {
@@ -884,7 +900,7 @@ func (c *CassandraTaskConfigQuery) Validate() (err error) {
 	return
 }
 
-func CassandraTaskFactory(s *Server, tc *TaskConfig) (result []Tasker, err error) {
+func CassandraTaskFactory(s *Server, tc *TaskConfig, ec *EndpointConfig) (result []Tasker, err error) {
 	config := &CassandraTaskConfig{}
 	if err = json.Unmarshal(tc.Config, config); err != nil {
 		return
@@ -912,7 +928,9 @@ type CassandraTask struct {
 /*
 Run cassandra task
 */
-func (c *CassandraTask) Run(r *http.Request, data map[string]interface{}) (res interface{}, status int, err error) {
+func (c *CassandraTask) Run(r *http.Request, data map[string]interface{}) (response *Response) {
+
+	response = NewResponse(http.StatusOK)
 
 	type ResultQuery struct {
 		Query  string                   `json:"query,omitempty"`
@@ -928,6 +946,8 @@ func (c *CassandraTask) Run(r *http.Request, data map[string]interface{}) (res i
 	result := &Result{
 		Queries: []ResultQuery{},
 	}
+
+	var err error
 
 	for _, query := range c.config.Queries {
 		args := []interface{}{}
@@ -989,10 +1009,10 @@ func (c *CassandraTask) Run(r *http.Request, data map[string]interface{}) (res i
 
 	// single result
 	if c.config.singleResultIndex != -1 {
-		return result.Queries[c.config.singleResultIndex], http.StatusOK, nil
+		response.Result(result.Queries[c.config.singleResultIndex])
+	} else {
+		response.Result(result)
 	}
-
-	res = result
 
 	return
 }
@@ -1061,7 +1081,7 @@ func (m *MySQLTaskConfigQuery) Validate() (err error) {
 /*
 Factory to create task
 */
-func MySQLTaskFactory(s *Server, tc *TaskConfig) (result []Tasker, err error) {
+func MySQLTaskFactory(s *Server, tc *TaskConfig, ec *EndpointConfig) (result []Tasker, err error) {
 	config := &MySQLTaskConfig{}
 	if err = json.Unmarshal(tc.Config, config); err != nil {
 		return
@@ -1086,9 +1106,9 @@ type MySQLTask struct {
 /*
 Run mysql task.
 */
-func (m *MySQLTask) Run(r *http.Request, data map[string]interface{}) (res interface{}, status int, err error) {
+func (m *MySQLTask) Run(r *http.Request, data map[string]interface{}) (response *Response) {
 
-	result := map[string]interface{}{}
+	response = NewResponse(http.StatusOK)
 
 	type Query struct {
 		Query string                   `json:"query"`
@@ -1103,6 +1123,7 @@ func (m *MySQLTask) Run(r *http.Request, data map[string]interface{}) (res inter
 	var (
 		db   *sqlx.DB
 		rows *sqlx.Rows
+		err error
 	)
 
 	for _, query := range m.config.Queries {
@@ -1177,13 +1198,10 @@ func (m *MySQLTask) Run(r *http.Request, data map[string]interface{}) (res inter
 
 	// single result
 	if m.config.singleResultIndex != -1 {
-		return queries[m.config.singleResultIndex], http.StatusOK, nil
+		response.Result(queries[m.config.singleResultIndex])
+	} else {
+		response.Result(queries)
 	}
-
-	result["queries"] = queries
-
-	res = result
-	err = nil
 
 	return
 }
@@ -1191,7 +1209,7 @@ func (m *MySQLTask) Run(r *http.Request, data map[string]interface{}) (res inter
 /*
 Factory to create task
 */
-func MultiTaskFactory(s *Server, tc *TaskConfig) (result []Tasker, err error) {
+func MultiTaskFactory(s *Server, tc *TaskConfig, ec *EndpointConfig) (result []Tasker, err error) {
 	config := &MultiTaskConfig{
 		Tasks: []*TaskConfig{},
 	}
@@ -1231,7 +1249,7 @@ func MultiTaskFactory(s *Server, tc *TaskConfig) (result []Tasker, err error) {
 			return
 		}
 
-		if tasks, err = factory(s, mtc); err != nil {
+		if tasks, err = factory(s, mtc, ec); err != nil {
 			err = fmt.Errorf("task %s returned error: %s", mtc.Type, err)
 			return
 		}
@@ -1282,22 +1300,221 @@ type MultiTask struct {
 /*
 Run multi task.
 */
-func (m *MultiTask) Run(r *http.Request, data map[string]interface{}) (res interface{}, status int, err error) {
+func (m *MultiTask) Run(r *http.Request, data map[string]interface{}) (response *Response) {
 
-	results := []map[string]interface{}{}
+	response = NewResponse(http.StatusOK)
+
+	results := []*Response{}
 
 	for _, tasker := range m.tasks {
-		res, status, err = tasker.Run(r, data)
-		results = append(results, map[string]interface{}{
-			"result": res,
-			"status": status,
-			"error":  err,
-		})
+		tr := tasker.Run(r, data)
+		results = append(results, tr)
 	}
 
 	if m.config.singleResultIndex != -1 {
-		return results[m.config.singleResultIndex], 200, nil
+		response.Result(results[m.config.singleResultIndex])
+	} else {
+		response.Result(results)
 	}
 
-	return results, 200, nil
+	return
+}
+
+/*
+Filesystem task gives possibility to serve files. It operates in two modes: file, directory.
+	file:
+		serves single file
+	directory:
+		serves all files in folder
+*/
+
+func NewFilesystemConfig() *FilesystemConfig {
+	return &FilesystemConfig{
+		Mode:       "file",
+		FileMuxVar: "file",
+	}
+}
+
+type FilesystemConfig struct {
+	Mode       string `json:"mode"`
+	File       string `json:"file"`
+	Directory  string `json:"directory"`
+	Index      bool   `json:"index"`
+	FileMuxVar string `json:"file_url_var"`
+}
+
+/*
+@TODO: add additional checks (file/directory existency)
+*/
+func (f *FilesystemConfig) Validate() (err error) {
+	// cleanup strings
+	f.Mode = strings.TrimSpace(f.Mode)
+	f.File = strings.TrimSpace(f.File)
+	f.Directory = strings.TrimSpace(f.Directory)
+	f.FileMuxVar = strings.TrimSpace(f.FileMuxVar)
+
+	// perform validations
+	switch f.Mode {
+	case "file":
+		if f.File == "" {
+			return errors.New("please provide file")
+		}
+		if f.Directory != "" {
+			return errors.New("directory set for mode file")
+		}
+	case "directory":
+		if f.File != "" {
+			return errors.New("file set for mode directory")
+		}
+		if f.Directory == "" {
+			return errors.New("please provide directory")
+		}
+		if f.FileMuxVar == "" {
+			return errors.New("please provide valid file_url_var")
+		}
+
+		// get absolute path
+		if f.Directory, err = filepath.Abs(f.Directory); err != nil {
+			return fmt.Errorf("directory abs returned error %s", err)
+		}
+
+		// check directory
+		if _, err = ioutil.ReadDir(f.Directory); err != nil {
+			return fmt.Errorf("directory error: %s", err)
+		}
+	default:
+		return fmt.Errorf("unknown filesystem mode: %s", f.Mode)
+	}
+	return
+}
+
+/*
+FilesystemFileTask
+	serve single file
+*/
+type FilesystemFileTask struct {
+	Task
+	config   *FilesystemConfig
+	endpoint *EndpointConfig
+	server   *Server
+}
+
+func (f *FilesystemFileTask) Run(r *http.Request, data map[string]interface{}) (response *Response) {
+	return NewResponse(http.StatusOK)
+}
+
+/*
+FilesystemDirectoryTask
+	serve single file
+*/
+type FilesystemDirectoryTask struct {
+	Task
+	config   *FilesystemConfig
+	endpoint *EndpointConfig
+	server   *Server
+}
+
+func (f *FilesystemDirectoryTask) Run(r *http.Request, data map[string]interface{}) (response *Response) {
+
+	var (
+		muxvar string
+		ok     bool
+	)
+
+	response = NewResponse(http.StatusOK)
+
+	urldata := data["url"].(map[string]string)
+
+	if muxvar, ok = urldata[f.config.FileMuxVar]; !ok {
+		return response.Status(http.StatusInternalServerError).Error(fmt.Errorf("file_url_var %s not found", f.config.FileMuxVar))
+	}
+
+	final := filepath.Join(f.config.Directory, muxvar)
+	_ = final
+
+	var (
+		err error
+		fi os.FileInfo
+	)
+	if fi, err = os.Stat(final); err != nil {
+		return response.Status(http.StatusNotFound)
+	}
+
+	if fi.IsDir() {
+		if !f.config.Index {
+			return response.Status(http.StatusNotFound)
+		}
+
+		var items []os.FileInfo
+		if items, err = ioutil.ReadDir(final); err != nil {
+			return response.Status(http.StatusInternalServerError)
+		}
+
+		result := []map[string]interface{}{}
+
+		for _, item := range items {
+
+			var u *url.URL
+			if u, err = f.server.Router.Get(f.endpoint.RouteName()).URL(f.config.FileMuxVar, filepath.Join(muxvar, item.Name())); err != nil {
+				return response.Status(http.StatusInternalServerError)
+			}
+
+			ri := map[string]interface{}{
+				"name":   u.Path,
+				"is_dir": item.IsDir(),
+			}
+			result = append(result, ri)
+		}
+
+		return response.Result(result)
+	}
+
+	// is file so serve it please
+
+	var contents []byte
+	if contents, err = ioutil.ReadFile(final); err != nil {
+		return response.Status(http.StatusInternalServerError)
+	}
+
+	//	mode := r.URL.Query().Get("mode")
+	//	if mode == "raw" {
+	//	}
+
+	b64content := base64.StdEncoding.EncodeToString(contents)
+	_, ff := filepath.Split(final)
+
+	return response.Result(map[string]string{
+		"name":     ff,
+		"contents": b64content,
+	})
+}
+
+func FilesystemFactory(s *Server, tc *TaskConfig, ec *EndpointConfig) (result []Tasker, err error) {
+	var task Tasker
+
+	config := NewFilesystemConfig()
+	if err = json.Unmarshal(tc.Config, config); err != nil {
+		return
+	}
+
+	if err = config.Validate(); err != nil {
+		return
+	}
+
+	switch config.Mode {
+	case "file":
+		task = &FilesystemFileTask{
+			config:   config,
+			endpoint: ec,
+			server:   s,
+		}
+	case "directory":
+		task = &FilesystemDirectoryTask{
+			config:   config,
+			endpoint: ec,
+			server:   s,
+		}
+	}
+
+	return []Tasker{task}, err
 }

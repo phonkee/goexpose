@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"regexp"
 	"strings"
+	"crypto/sha256"
+	"io"
 )
 
 /*
@@ -98,6 +100,12 @@ func (e *EndpointConfig) Validate() (err error) {
 	}
 
 	return
+}
+
+func (e *EndpointConfig ) RouteName() string {
+	hash := sha256.New()
+	io.WriteString(hash, e.Path)
+	return fmt.Sprintf("%x", hash.Sum(nil))
 }
 
 /*

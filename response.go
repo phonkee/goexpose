@@ -59,6 +59,8 @@ import (
 	"net/http"
 	"time"
 
+	"encoding/base64"
+
 	"github.com/golang/glog"
 )
 
@@ -93,6 +95,13 @@ Set status
 func (r *Response) Status(status int) *Response {
 	r.status = status
 	return r.AddValue("status", status).AddValue("message", http.StatusText(r.status))
+}
+
+/*
+GetStatus returns status
+*/
+func (r *Response) GetStatus() int {
+	return r.status
 }
 
 /*
@@ -194,14 +203,8 @@ func (r *Response) Write(w http.ResponseWriter, req *http.Request, start ...time
 	if r.raw != nil {
 		w.Write(*r.raw)
 	} else {
-		if r.pretty {
-			if body, err = json.MarshalIndent(r.data, "", "    "); err != nil {
-				return
-			}
-		} else {
-			if body, err = json.Marshal(r.data); err != nil {
-				return
-			}
+		if body, err = json.Marshal(r); err != nil {
+			return
 		}
 		w.Write(body)
 	}
@@ -221,6 +224,25 @@ func (r *Response) Write(w http.ResponseWriter, req *http.Request, start ...time
 	}
 
 	glog.V(1).Infof(format, args...)
+
+	return
+}
+
+/*
+Marshaler interface
+support json marshalling
+*/
+func (r *Response) MarshalJSON() (result []byte, err error) {
+	if r.raw != nil {
+		buf := make([]byte, base64.StdEncoding.EncodedLen(len(*r.raw)))
+		base64.StdEncoding.Encode(buf, *r.raw)
+		return buf, nil
+	}
+	if r.pretty {
+		result, err = json.MarshalIndent(r.data, "", "    ")
+	} else {
+		result, err = json.Marshal(r.data)
+	}
 
 	return
 }

@@ -133,6 +133,30 @@
           }
         }
       }
+    },
+    {
+      "path": "/file/some",
+      "methods": {
+        "GET": {
+          "type": "filesystem",
+          "config": {
+            "file": "/tmp/file"
+          }
+        }
+      }
+    },
+    {
+      "path": "/static/{file:.+}",
+      "methods": {
+        "GET": {
+          "type": "filesystem",
+          "config": {
+            "mode": "directory",
+            "directory": "/tmp",
+            "index": true
+          }
+        }
+      }
     }
   ],
   "authorizers": {
