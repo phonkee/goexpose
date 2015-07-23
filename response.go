@@ -168,6 +168,8 @@ func (r *Response) Raw(raw interface{}) *Response {
 
 /*
 Error method adds error, it's just a shorthand to AddValue("error", err)
+
+@TODO: store just string from error
 */
 func (r *Response) Error(err interface{}) *Response {
 	return r.AddValue("error", err)

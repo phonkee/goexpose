@@ -14,20 +14,17 @@ import (
 
 	"code.google.com/p/gorilla/mux"
 	"github.com/golang/glog"
-	"github.com/phonkee/wheedle/errors"
 )
 
 var (
-	version                   = "0.2"
-	ErrResponseAlreadyWritten = errors.New("response already written")
-	logo = `
+	version = "0.2"
+	logo    = `
      ______  ______  ______ __  __  ______ ______  ______  ______
     /\  ___\/\  __ \/\  ___/\_\_\_\/\  == /\  __ \/\  ___\/\  ___\
     \ \ \__ \ \ \/\ \ \  __\/_/\_\/\ \  _-\ \ \/\ \ \___  \ \  __\
      \ \_____\ \_____\ \_____/\_\/\_\ \_\  \ \_____\/\_____\ \_____\
       \/_____/\/_____/\/_____\/_/\/_/\/_/   \/_____/\/_____/\/_____/
                                                               v ` + version
-
 )
 
 /*
@@ -262,9 +259,6 @@ func (s *Server) Handle(task Tasker, authorizers Authorizers, ec *EndpointConfig
 		}
 
 		response.Write(w, r, t)
-
-
-
 	}
 }
 

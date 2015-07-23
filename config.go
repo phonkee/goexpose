@@ -122,6 +122,7 @@ Validate method validates task config
 */
 func (t *TaskConfig) Validate() (err error) {
 	t.Type = strings.TrimSpace(t.Type)
+	t.Description = strings.TrimSpace(t.Description)
 	if t.Type == "" {
 		return fmt.Errorf("Invalid task type")
 	}

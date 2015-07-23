@@ -3,6 +3,7 @@ package goexpose
 import (
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"net/http"
 
 	"fmt"
@@ -20,7 +21,6 @@ import (
 	"github.com/gocql/gocql"
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
-	"github.com/phonkee/wheedle/errors"
 )
 
 func init() {
@@ -231,17 +231,6 @@ type InfoTask struct {
 InfoTask Run method.
 */
 func (i *InfoTask) Run(r *http.Request, data map[string]interface{}) (response *Response) {
-	data = map[string]interface{}{
-		"version": i.version,
-	}
-
-	type Item struct {
-		Path        string   `json:"path"`
-		Method      string   `json:"method,omitempty"`
-		Authorizers []string `json:"authorizers,omitempty"`
-		Type        string   `json:"type"`
-		Description string   `json:"description,omitempty"`
-	}
 
 	endpoints := []*Response{}
 
@@ -250,15 +239,20 @@ func (i *InfoTask) Run(r *http.Request, data map[string]interface{}) (response *
 		r := NewResponse(http.StatusOK)
 		r.AddValue("path", route.Path)
 		r.AddValue("method", route.Method)
-		r.AddValue("authorizers", route.TaskConfig.Authorizers)
+		if len(route.TaskConfig.Authorizers) > 0 {
+			r.AddValue("authorizers", route.TaskConfig.Authorizers)
+		}
 		r.AddValue("type", route.TaskConfig.Type)
-		r.AddValue("description", route.TaskConfig.Description)
+		if route.TaskConfig.Description != "" {
+			r.AddValue("description", route.TaskConfig.Description)
+		}
 		endpoints = append(endpoints, r.StripStatusData())
 	}
 
-	data["endpoints"] = endpoints
-
-	return NewResponse(http.StatusOK).Result(data)
+	return NewResponse(http.StatusOK).Result(map[string]interface{}{
+		"version":   i.version,
+		"endpoints": endpoints,
+	})
 }
 
 /*
@@ -1308,20 +1302,20 @@ FilesystemTask
 */
 type FilesystemTask struct {
 	Task
-	config   *FilesystemConfig
+	config *FilesystemConfig
 }
 
 /*
 Run method for FilesystemTask
- */
+*/
 func (f *FilesystemTask) Run(r *http.Request, data map[string]interface{}) (response *Response) {
 
 	var (
 		directory string
-		err      error
-		filename string
-		finfo    os.FileInfo
-		output   string
+		err       error
+		filename  string
+		finfo     os.FileInfo
+		output    string
 	)
 
 	response = NewResponse(http.StatusOK)
@@ -1404,7 +1398,7 @@ func FilesystemFactory(s *Server, tc *TaskConfig, ec *EndpointConfig) (result []
 	}
 
 	result = []Tasker{&FilesystemTask{
-		config:   config,
+		config: config,
 	}}
 	return
 }
