@@ -1,7 +1,7 @@
 Goexpose
 -------
 
-Goexpose is lightweitght json api server that maps url path to various tasks.
+Goexpose is lightweight json api server that maps url path to various tasks.
 Goexpose can be used in various scenarios: either make call commands on your servers (or 
 farm of servers), or you can use it as monitoring tool.
 Builtin tasks are currently:
