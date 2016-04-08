@@ -152,7 +152,7 @@ Common configuration is:
 ```json
 {
     "type": "http",
-    "authorizers": []
+    "authorizers": [],
     "config": {},
     "query_params": {
         "params: [{
@@ -179,7 +179,7 @@ Http task is task that can do external request. Task configuration is following:
 ```json
 {
     "type": "http",
-    {
+    "config": {
         "single_result": 0,
         "urls": [{
             "url": "http://127.0.0.1:8000/{{.url.id}}",
@@ -497,7 +497,7 @@ them in your tasks defined by name. e.g.:
                 "type": "info",
             }
         }
-    }]
+    }],
     "authorizers": {
         "username_pass": {
             "type": "basic",
