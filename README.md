@@ -155,7 +155,7 @@ Common configuration is:
     "authorizers": [],
     "config": {},
     "query_params": {
-        "params: [{
+        "params": [{
             "name": "id",
             "regexp": "^[0-9]+$",
             "default": "0"
