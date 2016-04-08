@@ -10,12 +10,49 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync"
+
+	"github.com/ghodss/yaml"
+	"errors"
 )
+
+type unmarshalFunc func([]byte, interface{}) error
+
+var (
+	configFormats     map[string]unmarshalFunc
+	configFormatsLock *sync.RWMutex
+)
+
+func init() {
+
+	// prepare configuration formats (currently json, yaml)
+	configFormats = map[string]unmarshalFunc{}
+	configFormatsLock = &sync.RWMutex{}
+
+	func() {
+		configFormatsLock.Lock()
+		defer configFormatsLock.Unlock()
+		configFormats["json"] = json.Unmarshal
+
+		// custom yaml unmarshal, since when used directly it panics.
+		// so we just convert yaml to json and call json unmarshal
+		configFormats["yaml"] = func(body []byte, target interface{}) (err error){
+			if response, e := yaml.YAMLToJSON(body); e != nil {
+				err = e
+				return
+			} else {
+				return json.Unmarshal(response, target)
+			}
+
+			return
+		}
+	}()
+}
 
 /*
 Returns filename from file
 */
-func NewConfigFromFilename(filename string) (config *Config, err error) {
+func NewConfigFromFilename(filename, format string) (config *Config, err error) {
 	config = NewConfig()
 
 	var (
@@ -25,10 +62,26 @@ func NewConfigFromFilename(filename string) (config *Config, err error) {
 		return
 	}
 
-	// unmarshal config
-	if err = json.Unmarshal(result, config); err != nil {
+	found := false
+	for name, fmtUnmarshalFunc := range configFormats {
+		if name == format {
+			if err = fmtUnmarshalFunc(result, config); err != nil {
+				return
+			}
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		err = errors.New("file format not found")
 		return
 	}
+
+	// unmarshal config
+	//if err = json.Unmarshal(result, config); err != nil {
+	//	return
+	//}
 
 	// get config dir
 	if config.Directory, err = filepath.Abs(filepath.Dir(filename)); err != nil {

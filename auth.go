@@ -81,6 +81,7 @@ func GetAuthorizers(config *Config) (result Authorizers, err error) {
 		)
 		if factory, ok = authorizers[ac.Type]; !ok {
 			err = fmt.Errorf("authorizer %s does not exist", ac.Type)
+			return
 		}
 
 		if authorizer, err = factory(ac); err != nil {

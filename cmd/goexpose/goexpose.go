@@ -9,7 +9,8 @@ import (
 )
 
 func main() {
-	configVar := flag.String("config", "config.json", "config file location")
+	configVar := flag.String("config", "config.json", "Configuration file location")
+	formatVar := flag.String("format", "json", "Configuration file format. (json, yaml)")
 
 	// Parse command line flags
 	flag.Parse()
@@ -21,7 +22,7 @@ func main() {
 	)
 
 	// read config file
-	if config, err = goexpose.NewConfigFromFilename(*configVar); err != nil {
+	if config, err = goexpose.NewConfigFromFilename(*configVar, *formatVar); err != nil {
 		glog.Errorf("config error: %v", err)
 		os.Exit(1)
 	}
