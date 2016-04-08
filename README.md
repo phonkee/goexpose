@@ -1,5 +1,4 @@
-Goexpose
--------
+# Goexpose
 
 Goexpose is lightweight json api server that maps url path to various tasks.
 Goexpose can be used in various scenarios: either make call commands on your servers (or 
@@ -25,34 +24,36 @@ In the future more types of authorization will be implemented.
 
 Lets see example configuration file:
 
-    {
-        "host": "127.0.0.1",
-        "port": 9900,
-        "ssl": {
-            "cert": "./cert.pem",
-            "key": "./key.pem"
-        },
-        "reload_env": true,
-        "endpoints": [{
-            "path": "/info",
-            "authorizers": ["basic"],
-            "methods": {
-                "GET": {
-                    "type": "info",
-                    "description": "Info task"
-                }
+```json
+{
+    "host": "127.0.0.1",
+    "port": 9900,
+    "ssl": {
+        "cert": "./cert.pem",
+        "key": "./key.pem"
+    },
+    "reload_env": true,
+    "endpoints": [{
+        "path": "/info",
+        "authorizers": ["basic"],
+        "methods": {
+            "GET": {
+                "type": "info",
+                "description": "Info task"
             }
-        }],
-        "authorizers": {
-            "basic": {
-                "type": "basic",
-                "config": {
-                    "username": "hello",
-                    "password": "world"
-                }
+        }
+    }],
+    "authorizers": {
+        "basic": {
+            "type": "basic",
+            "config": {
+                "username": "hello",
+                "password": "world"
             }
         }
     }
+}
+```
 
 This means that Goexpose will listen on https://127.0.0.1:9900 
 "endpoints" is a list of defined endpoints that goexpose responds to.
@@ -71,31 +72,30 @@ Configuration:
     * methods - dictionary that maps http method to task
         
 
-Installation:
--------------
+## Installation:
 
 Run go install 
     
     go install github.com/phonkee/goexpose
 
 
-Interpolation:
---------------
+## Interpolation:
 
 Goexpose provides various variables from url, query, request.
 This data is available in commands to interpolate various strings.
 text/template is used and available data is in this structure:
-    
-    {
-        "url": {},
-        "query": {},
-        "request": {
-            "method": "",
-            "body": ""
-        },
-        "env": {}
-    }
-
+   
+```json
+{
+    "url": {},
+    "query": {},
+    "request": {
+        "method": "",
+        "body": ""
+    },
+    "env": {}
+}
+```
 * env - environment variables
 * url - variables from url regular expressions
 * query - query values from "query_params"
@@ -103,8 +103,7 @@ text/template is used and available data is in this structure:
     * method - http method from request
     * body - body passed to request
 
-Query Params:
--------------
+## Query Params:
 
 Goexpose has support to use query parameters. But you have to configure all
 params that you want to use. Goexpose gives you possibility to validate params
@@ -114,23 +113,25 @@ and also on task level.
 
 Configuration:
 
-    {
-        "query_params": {
-            "return_params": true,
-            "params": [{
-                "name": "page",
-                "regexp": "^[0-9]+$",
-                "default": "0"
-            }, {
-                "name": "limit",
-                "regexp": "^[0-9]+$",
-                "default": "10"
-            }]
-        }
+```json
+{
+    "query_params": {
+        "return_params": true,
+        "params": [{
+            "name": "page",
+            "regexp": "^[0-9]+$",
+            "default": "0"
+        }, {
+            "name": "limit",
+            "regexp": "^[0-9]+$",
+            "default": "10"
+        }]
     }
+}
+```
 
-Formats:
---------
+## Formats:
+
 
 http task and shell task have possibility to set format of response.
 Currently available formats are: "json", "jsonlines", "lines", "text".
@@ -141,27 +142,28 @@ Format can be combination of multiple formats. e.g.
 First format that returns result without error will be used.
 If "text" is not found in format, it is automatically inserted to the end.
 
-Tasks:
-=====
+## Tasks:
 
 Tasks can be configured in config["methods"] which is a map[string]TaskConfig - 
 http method to task.
 Every task config has common part and configuration for given task.
 Common configuration is:
 
-    {
-        "type": "http",
-        "authorizers": []
-        "config": {},
-        "query_params": {
-            "params: [{
-                "name": "id",
-                "regexp": "^[0-9]+$",
-                "default": "0"
-            }],
-            "return_params": true
-        }
+```json
+{
+    "type": "http",
+    "authorizers": []
+    "config": {},
+    "query_params": {
+        "params: [{
+            "name": "id",
+            "regexp": "^[0-9]+$",
+            "default": "0"
+        }],
+        "return_params": true
     }
+}
+```
 
 * type - type of task.
 * authorizers - list of authorizers for given endpoint (see Authorizers)
@@ -170,31 +172,31 @@ Common configuration is:
 * return_params - whether goexpose should return those params in response
 
 
-HttpTask:
----------
+### HttpTask:
 
 Http task is task that can do external request. Task configuration is following:
 
+```json
+{
+    "type": "http",
     {
-        "type": "http",
-        {
-            "single_result": 0,
-            "urls": [{
-                "url": "http://127.0.0.1:8000/{{.url.id}}",
-                "post_body": false,
-                "format": "json",
-                "return_headers": false
-            }, {
-                "url": "http://127.0.0.1:8000/{{.url.id}}",
-                "method": "PUT",
-                "post_body": false,
-                "format": "json",
-                "return_headers": false,
-                "post_body": true,
-            }]
-        }
-    
+        "single_result": 0,
+        "urls": [{
+            "url": "http://127.0.0.1:8000/{{.url.id}}",
+            "post_body": false,
+            "format": "json",
+            "return_headers": false
+        }, {
+            "url": "http://127.0.0.1:8000/{{.url.id}}",
+            "method": "PUT",
+            "post_body": false,
+            "format": "json",
+            "return_headers": false,
+            "post_body": true,
+        }]
     }
+}
+```
 
 Configuration:
 
@@ -208,8 +210,8 @@ Configuration:
     * post_body - if goexpose should post body of goexpose request to url
 * single_result - only that result will be returned (unwrapped from array)
 
-ShellTask:
-----------
+### ShellTask:
+
 
 ShellTask is task that is able to run shell commands on target server. Every command
 is interpolated (see Interpolation)
@@ -218,21 +220,23 @@ is interpolated (see Interpolation)
 to shell injection.
 Example:
 
-    {
-        "type": "shell",
-        "config": {
-            "env": {
-                "key": "value"
-            },
-            "shell": "/bin/bash",
-            "commands": [{
-                "command": "echo \"{{.url.id}}\"",
-                "chdir": "/tmp",
-                "format": "json",
-                "return_command": true
-            }]
-        }
+```json
+{
+    "type": "shell",
+    "config": {
+        "env": {
+            "key": "value"
+        },
+        "shell": "/bin/bash",
+        "commands": [{
+            "command": "echo \"{{.url.id}}\"",
+            "chdir": "/tmp",
+            "format": "json",
+            "return_command": true
+        }]
     }
+}
+```
 
 Configuration:
 
@@ -245,31 +249,32 @@ Configuration:
     * return_command - whether to return command in response
 * single_result - index which command will be "unwrapped" from result array
 
-InfoTask:
----------
+### InfoTask:
+
 
 Info task returns information about goexpose. In result you can find version of goexpose and also
 all registered tasks with info. Task info has no configuration.
 
-PostgresTask:
--------------
+### PostgresTask:
 
 Run queries on postgres database. Configuration for postgres task:
 
-    {
-        "type": "postgres",
-        "config": {
-            "return_queries": true,
-            "queries": [{
-                "url": "postgres://username:password@localhost/database",
-                "query": "SELECT * FROM product WHERE id = $1",
-                "args": [
-                    "{{.url.id}}"
-                ]
-            }]
-        }
+```json
+{
+    "type": "postgres",
+    "config": {
+        "return_queries": true,
+        "queries": [{
+            "url": "postgres://username:password@localhost/database",
+            "query": "SELECT * FROM product WHERE id = $1",
+            "args": [
+                "{{.url.id}}"
+            ]
+        }]
     }
-    
+}
+```
+
 Configuration:
 
 * return_queries - whether queries with args should be added 
@@ -280,27 +285,28 @@ Configuration:
     * args - list of arguments to query - all queries are interpolated (see Interpolation).
 * single_result - index which query will be "unwrapped" from result array
 
-RedisTask:
-----------
+### RedisTask:
 
 Task that can run multiple commands on redis. Example:
 
-    {
-        "type": "redis",
-        "config": {
-            "address": "127.0.0.1:6379",
-            "network": "tcp",
-            "database": 1,
-            "return_queries": true,
-            "queries": [{
-                "command": "GET",
-                "args": [
-                    "product:{{.url.id}}"
-                ],
-                "type": "string"
-            }]
-        }
+```json
+{
+    "type": "redis",
+    "config": {
+        "address": "127.0.0.1:6379",
+        "network": "tcp",
+        "database": 1,
+        "return_queries": true,
+        "queries": [{
+            "command": "GET",
+            "args": [
+                "product:{{.url.id}}"
+            ],
+            "type": "string"
+        }]
     }
+}
+```
     
 Configuration:
   
@@ -327,28 +333,29 @@ Configuration:
         * stringmap - map[string]string
 * single_result - index which query will be "unwrapped" from result array
 
-CassandraTask:
---------------
+### CassandraTask:
 
 Run cassandra queries task. Example:
 
-    {
-        "type": "cassandra",
-        "config": {
-            "return_queries": true,
-            "queries": [{
-                "query": "SELECT * from user WHERE id = ?",
-                "args": [
-                    "{{.url.id}}"
-                ],
-                "cluster": [
-                    "192.168.1.1",
-                    "192.168.1.2"
-                ],
-                "keyspace": "keyspace"
-            }]
-        }
+```json
+{
+    "type": "cassandra",
+    "config": {
+        "return_queries": true,
+        "queries": [{
+            "query": "SELECT * from user WHERE id = ?",
+            "args": [
+                "{{.url.id}}"
+            ],
+            "cluster": [
+                "192.168.1.1",
+                "192.168.1.2"
+            ],
+            "keyspace": "keyspace"
+        }]
     }
+}
+```
 
 Configuration:
 
@@ -361,24 +368,25 @@ Configuration:
 * single_result - index which query will be "unwrapped" from result array
 
 
-MySQLTask:
-----------
+### MySQLTask:
 
 Run mysql queries. Example:
 
-    {
-        "type": "mysql",
-        "config": {
-            "return_queries": true,
-            "queries": [{
-                "url": "user:password@localhost/dbname",
-                "query": "SELECT * FROM auth_user WHERE id = ?",
-                "args": [
-                    "{{.url.id}}"
-                ]
-            }]
-        }
+```json
+{
+    "type": "mysql",
+    "config": {
+        "return_queries": true,
+        "queries": [{
+            "url": "user:password@localhost/dbname",
+            "query": "SELECT * FROM auth_user WHERE id = ?",
+            "args": [
+                "{{.url.id}}"
+            ]
+        }]
     }
+}
+```
 
 Configuration:
 
@@ -389,25 +397,26 @@ Configuration:
     * args - list of arguments, every argument will be interpolated (see Interpolation)
 * single_result - index which query will be "unwrapped" from result array
 
-MultiTask:
-----------
+### MultiTask:
 
 Multi task gives possibility to run multiple tasks in one task. These task can be any tasks (except of embedded multi task).
 
-    {
-        "type": "multi",
-        "config": {
+```json
+{
+    "type": "multi",
+    "config": {
+        "single_result": 0,
+        "tasks": [{
+            "type": "http",
+            "config": {
             "single_result": 0,
-            "tasks": [{
-                "type": "http",
-                "config": {
-                "single_result": 0,
-                "urls": [{
-                    "url": "http://www.google.com"
-                }]
-            }
-        }]        
-    }
+            "urls": [{
+                "url": "http://www.google.com"
+            }]
+        }
+    }]        
+}
+```
 
 Configuration:
 
@@ -415,49 +424,52 @@ Configuration:
 * tasks - list of tasks (these embedded tasks does not support authorizers)
 
 
-FilesystemTask:
----------------
+### FilesystemTask:
 
 Filesystem task is simple yet powerful task. It can be configured to serve single file or serve all files in directory
 with optional index page for directories.
 
 In following example we serve only one file on url /file/some. The output will be json with base encoded file content.
 
-    {
-        "path": "/file/some",
-        "methods": {
-            "GET": {
-                "type": "filesystem",
-                "config": {
-                    "file": "/tmp/file"
-                }
+```json
+{
+    "path": "/file/some",
+    "methods": {
+        "GET": {
+            "type": "filesystem",
+            "config": {
+                "file": "/tmp/file"
             }
         }
     }
+}
+```
 
 In next example we will serve files in directory and provide index page for directories and also give possibility to 
 return raw file as response.
 
-    {
-        "path": "/static/{file:.+}",
-        "methods": {
-            "GET": {
-                "query_params": {
-                    "params": [{
-                        "name": "output",
-                        "regexp": "^raw$",
-                        "default": ""
-                    }],
-                },                
-                "config": {
-                    "file": "{{.url.file}}",
-                    "output": "{{.query.output}}",
-                    "directory": "/tmp",
-                    "index": true
-                }
+```json
+{
+    "path": "/static/{file:.+}",
+    "methods": {
+        "GET": {
+            "query_params": {
+                "params": [{
+                    "name": "output",
+                    "regexp": "^raw$",
+                    "default": ""
+                }],
+            },                
+            "config": {
+                "file": "{{.url.file}}",
+                "output": "{{.query.output}}",
+                "directory": "/tmp",
+                "index": true
             }
         }
     }
+}
+```
 
 Configuration:
 
@@ -468,48 +480,61 @@ Configuration:
 * index - whether to serve index endpoint for directory
 
 
-Authorizers:
-------------
+## Authorizers:
 
 Types of authentication ( I know it's silly name..)
 First you have to define your authorizers in top level "authorizers" and then you can use
 them in your tasks defined by name. e.g.:
 
-    {
-        "endpoints": [{
-            "path": "/info",
-            "authorizers": ["username_pass"],
-            "methods": {
-                "GET": {
-                    "type": "info",
-                }
+
+```json
+{
+    "endpoints": [{
+        "path": "/info",
+        "authorizers": ["username_pass"],
+        "methods": {
+            "GET": {
+                "type": "info",
             }
-        }]
-        "authorizers": {
-            "username_pass": {
-                "type": "basic",
-                "config": {
-                    "username": "hello",
-                    "password": "world"
-                }
+        }
+    }]
+    "authorizers": {
+        "username_pass": {
+            "type": "basic",
+            "config": {
+                "username": "hello",
+                "password": "world"
             }
         }
     }
+}
+```
 
 You can set your authorizers in endpoint configuration, or you can set in every task for fine tuned
 configuration.
-Currently there is only "basic" authorizer implemented, but in the future I plan to implement
-other types such as: postgres, shell, mysql..
 
-Example:
---------
+### Basic
+
+Support for basic authentication.
+
+```json
+{
+    "type": "basic",
+    "config": {
+        "username": "hello",
+        "password": "world"
+    }
+}
+```
+
+
+# Example:
 
 in folder example/ there is complete example for couple of tasks.
-You can find example [here!](example/config.json)
+You can find example [here!](example/config.json) or [yaml!](example/config.yaml)
 
 @TODO:
 Add tasks for: sqlite, memcached, mongodb
   
-Author:
--------
+## Author:
 phonkee

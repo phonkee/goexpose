@@ -24,6 +24,7 @@ type Authorizer interface {
 
 func init() {
 	RegisterAuthorizer("basic", BasicAuthorizerFactory)
+	RegisterAuthorizer("ldap", LDAPAuthorizerFactory)
 }
 
 /*
@@ -133,7 +134,7 @@ func (a Authorizers) Authorize(r *http.Request, config *EndpointConfig) (err err
 
 /*
 Returns names of all authorizerse
- */
+*/
 func (a Authorizers) Names() []string {
 	result := make([]string, 0, len(a))
 	for k, _ := range a {
@@ -216,6 +217,55 @@ func (b *BasicAuthorizer) Authorize(r *http.Request) (err error) {
 	if username != b.config.Username || password != b.config.Password {
 		return ErrUnauthorized
 	}
+
+	return
+}
+
+/*
+LDAP authorizer.
+
+This authorizer handles username/password authentication from LDAP server.
+It also supports blacklist/whitelist of users that are allowed to access goexpose endpoint.
+*/
+
+type LDAPAuthorizerConfig struct {
+	Host string
+	Port int
+}
+
+func LDAPAuthorizerFactory(ac *AuthorizerConfig) (result Authorizer, err error) {
+	config := &LDAPAuthorizerConfig{}
+	if err = json.Unmarshal(ac.Config, config); err != nil {
+		return
+	}
+
+	result = &LDAPAuthorizer{
+		config: config,
+		basic:  &BasicAuthorizer{},
+	}
+	return
+}
+
+/*
+LDAPAuthorizer
+Main ldap authorizer implementation
+*/
+type LDAPAuthorizer struct {
+	config *LDAPAuthorizerConfig
+
+	basic *BasicAuthorizer
+}
+
+func (l *LDAPAuthorizer) Authorize(r *http.Request) (err error) {
+	var (
+		username string
+		password string
+	)
+	if username, password, err = l.basic.GetBasicAuth(r); err != nil {
+		return
+	}
+
+	_, _ = username, password
 
 	return
 }
