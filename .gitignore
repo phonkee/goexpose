@@ -28,3 +28,5 @@ _testmain.go
 
 .idea
 cmd/goexpose/goexpose
+
+run.sh

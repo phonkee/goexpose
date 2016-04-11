@@ -58,7 +58,9 @@ Lets see example configuration file:
 This means that Goexpose will listen on https://127.0.0.1:9900 
 "endpoints" is a list of defined endpoints that goexpose responds to.
 
-Configuration:
+You can also write your configuration in yaml format(command line arg `-format`)
+
+#### Configuration:
 
 * host - host that we will listen on
 * port - port number
@@ -527,6 +529,29 @@ Support for basic authentication.
 }
 ```
 
+### LDAP
+
+Support for LDAP authentication.
+
+```json
+{
+    "type": "ldap",
+    "config": {
+        "host": "localhost",
+        "port": 1234,
+        "network": "tls"
+    }
+}
+```
+
+Configuration:
+* host - host of ldap server (default `localhost`)
+* port - port of ldap server (default `389`) 
+* network - one of `tcp`, `tls` (default `tcp`)
+* whitelist - list of usernames that can access goexpose endpoint
+* blacklist - list of usernames that are blacklisted to access endpoint
+
+@TODO - add tls support for certificates
 
 # Example:
 

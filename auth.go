@@ -9,10 +9,16 @@ import (
 	"sync"
 
 	"encoding/json"
+
+	"github.com/nmcclain/ldap"
 )
 
 var (
-	ErrUnauthorized = errors.New("unauthorized")
+	ErrUnauthorized               = errors.New("unauthorized")
+	ErrBlacklisted                = errors.New("user is blacklisted")
+	ErrNotWhitelisted             = errors.New("user is not whitelisted")
+	ErrBlacklistWhitelistProvided = errors.New("blacklist and whitelist set, that doesn't make sense.")
+	ErrUnknownNetwork            = errors.New("unknown network")
 )
 
 /*
@@ -228,14 +234,53 @@ This authorizer handles username/password authentication from LDAP server.
 It also supports blacklist/whitelist of users that are allowed to access goexpose endpoint.
 */
 
+const (
+	LDAP_DEFAULT_HOST    = "localhost"
+	LDAP_DEFAULT_PORT    = 389
+	LDAP_DEFAULT_NETWORK = "tcp"
+)
+
 type LDAPAuthorizerConfig struct {
-	Host string
-	Port int
+	Host      string   `json:"host"`
+	Port      int      `json:"port"`
+	Network   string   `json:"network"`
+	Whitelist []string `json:"whitelist"`
+	Blacklist []string `json:"blacklist"`
+}
+
+/*
+Validate configuration
+*/
+func (l *LDAPAuthorizerConfig) Validate() (err error) {
+	if len(l.Whitelist) > 0 && len(l.Blacklist) > 0 {
+		return ErrBlacklistWhitelistProvided
+	}
+
+	found := false
+	for _, an := range []string{"tcp", "tls"} {
+		if an == l.Network {
+			found = true
+		}
+	}
+
+	if !found {
+		return ErrUnknownNetwork
+	}
+
+	return
 }
 
 func LDAPAuthorizerFactory(ac *AuthorizerConfig) (result Authorizer, err error) {
-	config := &LDAPAuthorizerConfig{}
+	config := &LDAPAuthorizerConfig{
+		Host:    LDAP_DEFAULT_HOST,
+		Port:    LDAP_DEFAULT_PORT,
+		Network: LDAP_DEFAULT_NETWORK,
+	}
 	if err = json.Unmarshal(ac.Config, config); err != nil {
+		return
+	}
+
+	if err = config.Validate(); err != nil {
 		return
 	}
 
@@ -265,7 +310,49 @@ func (l *LDAPAuthorizer) Authorize(r *http.Request) (err error) {
 		return
 	}
 
-	_, _ = username, password
+	var conn *ldap.Conn
+
+	// dial correct network
+	fullhost := fmt.Sprintf("%s:%d", l.config.Host, l.config.Port)
+	if l.config.Network == "tcp" {
+		conn, err = ldap.Dial("tcp", fullhost);
+	} else if l.config.Network == "tls" {
+		conn, err = ldap.DialTLS("tcp", fullhost, nil)
+	}
+
+	// check dial error
+	if err != nil {
+		return
+	}
+
+	// check blacklist
+	if len(l.config.Blacklist) > 0 {
+		for _, bl := range l.config.Blacklist {
+			if bl == username {
+				return ErrBlacklisted
+			}
+		}
+	}
+
+	// check whitelist
+	if len(l.config.Whitelist) > 0 {
+		found := false
+		for _, wl := range l.config.Whitelist {
+			if wl == username {
+				found = true
+				break
+			}
+		}
+
+		if !found {
+			return ErrNotWhitelisted
+		}
+	}
+
+	// check ldap for username/password
+	if err = conn.Bind(username, password); err != nil {
+		return err
+	}
 
 	return
 }
