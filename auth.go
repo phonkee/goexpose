@@ -10,6 +10,8 @@ import (
 
 	"encoding/json"
 
+	"net/url"
+
 	"github.com/nmcclain/ldap"
 )
 
@@ -18,7 +20,8 @@ var (
 	ErrBlacklisted                = errors.New("user is blacklisted")
 	ErrNotWhitelisted             = errors.New("user is not whitelisted")
 	ErrBlacklistWhitelistProvided = errors.New("blacklist and whitelist set, that doesn't make sense.")
-	ErrUnknownNetwork            = errors.New("unknown network")
+	ErrUnknownNetwork             = errors.New("unknown network")
+	ErrURLInvalidTemplate         = errors.New("url is invalid template")
 )
 
 /*
@@ -31,6 +34,7 @@ type Authorizer interface {
 func init() {
 	RegisterAuthorizer("basic", BasicAuthorizerFactory)
 	RegisterAuthorizer("ldap", LDAPAuthorizerFactory)
+	RegisterAuthorizer("http", HttpAuthorizerFactory)
 }
 
 /*
@@ -315,7 +319,7 @@ func (l *LDAPAuthorizer) Authorize(r *http.Request) (err error) {
 	// dial correct network
 	fullhost := fmt.Sprintf("%s:%d", l.config.Host, l.config.Port)
 	if l.config.Network == "tcp" {
-		conn, err = ldap.Dial("tcp", fullhost);
+		conn, err = ldap.Dial("tcp", fullhost)
 	} else if l.config.Network == "tls" {
 		conn, err = ldap.DialTLS("tcp", fullhost, nil)
 	}
@@ -355,4 +359,129 @@ func (l *LDAPAuthorizer) Authorize(r *http.Request) (err error) {
 	}
 
 	return
+}
+
+/*
+http authorizer
+
+http authorizer basically makes http request to check username and password against web service.
+*/
+
+func HttpAuthorizerFactory(ac *AuthorizerConfig) (result Authorizer, err error) {
+
+	var (
+		config *HttpAuthorizerConfig
+	)
+
+	// get config
+	if config, err = NewHttpAuthorizerConfig(ac); err != nil {
+		return
+	}
+
+	ha := &HttpAuthorizer{
+		config: config,
+	}
+
+	result = ha
+	return
+}
+
+/*
+HttpAuthorizer implementation
+*/
+type HttpAuthorizer struct {
+	config *HttpAuthorizerConfig
+}
+
+/*
+Authorize main routine to allow user access
+*/
+func (h *HttpAuthorizer) Authorize(r *http.Request) (err error) {
+
+	// prepare data for template interpolation
+	data := map[string]interface{}{
+		"username": "phonkee",
+		"password": "password",
+	}
+
+	var (
+		url, method, body string
+	)
+
+	url, err = h.config.RenderURL(data)
+	method, err = h.config.RenderMethod(data)
+	body, err = h.config.RenderData(data)
+
+	var (
+		response *http.Response
+	)
+
+	// use Requester
+	if _, response, err = NewRequester().DoNew(method, url, strings.NewReader(body)); err != nil {
+		return err
+	}
+
+	if response.StatusCode != http.StatusOK {
+		return ErrUnauthorized
+	}
+
+	return
+}
+
+/*
+NewHttpAuthorizerConfig
+
+Returns fresh copy of AuthorizerConfi
+*/
+
+func NewHttpAuthorizerConfig(ac *AuthorizerConfig) (hac *HttpAuthorizerConfig, err error) {
+	hac = &HttpAuthorizerConfig{
+		Method: "GET",
+		Data:   "",
+	}
+
+	if err = json.Unmarshal(ac.Config, hac); err != nil {
+		return
+	}
+
+	var (
+		parsed *url.URL
+	)
+
+	if parsed, err = url.Parse(hac.URL); err != nil {
+		return
+	}
+
+	// update url
+	hac.URL = parsed.String()
+
+	// trim spaces
+	hac.URL = strings.TrimSpace(hac.URL)
+	hac.Data = strings.TrimSpace(hac.Data)
+	hac.Method = strings.TrimSpace(hac.Method)
+
+	return
+}
+
+/*
+HttpAuthorizerConfig implementation
+
+configuration for HttpAuthorizer
+*/
+type HttpAuthorizerConfig struct {
+	URL    string `json:"url"`
+	Data   string `json:"data"`
+	Method string `json:"method"`
+}
+
+func (h *HttpAuthorizerConfig) RenderURL(data map[string]interface{}) (result string, err error) {
+	return Interpolate(h.URL, data)
+}
+
+func (h *HttpAuthorizerConfig) RenderData(data map[string]interface{}) (result string, err error) {
+	return Interpolate(h.Data, data)
+}
+
+func (h *HttpAuthorizerConfig) RenderMethod(data map[string]interface{}) (result string, err error) {
+	return Interpolate(h.Method, data)
 }

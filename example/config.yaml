@@ -7,6 +7,7 @@ endpoints:
     methods:
       GET:
         type: "info"
+        authorizers: ["custom"]
   -
     path: "/test"
     methods:
@@ -116,3 +117,8 @@ authorizers:
     config:
       username: "hello"
       password: "world"
+  custom:
+    type: "http"
+    config:
+      url: "http://localhost:8080/"
+      data: '{"user": "{{.username}}", "password": "{{.password}}"}'

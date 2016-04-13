@@ -553,6 +553,27 @@ Configuration:
 
 @TODO - add tls support for certificates
 
+### http
+
+Support to call external web services for authentication (such as rest).
+Request to goexpose is allowed when the http call returns status code `200`. Otherwise Unauthorized is raised.
+
+```json
+{
+    "type": "http",
+    "config": {
+        "url": "http://localhost:8080/api/users/login",
+        "data": "{\"username\": \"{{.username}}\", \"password\": \"{{.password}}\"}",
+        "method": "post"
+    }
+}
+```
+
+Configuration:
+* url - url to which goexpose make request. Interpolated (username, password)
+* data - post data (such as json, url values). Interpolated (username, password)
+* method - http method. Interpolated (username, password)
+
 # Example:
 
 in folder example/ there is complete example for couple of tasks.

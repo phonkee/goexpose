@@ -143,7 +143,7 @@ func (s *ShellTask) Run(r *http.Request, data map[string]interface{}) (response 
 			finalCommand string
 			cmd          *exec.Cmd
 		)
-		if b, e = s.Interpolate(command.Command, data); e != nil {
+		if b, e = Interpolate(command.Command, data); e != nil {
 			cmdresp.Error(e)
 			goto Append
 		}
@@ -381,7 +381,7 @@ func (h *HttpTask) Run(r *http.Request, data map[string]interface{}) (response *
 		}
 
 		var b string
-		if b, err = h.Interpolate(url.URL, data); err != nil {
+		if b, err = Interpolate(url.URL, data); err != nil {
 			ir.Error(err)
 			goto Append
 		}
@@ -523,7 +523,7 @@ func (p *PostgresTask) Run(r *http.Request, data map[string]interface{}) (respon
 
 			errq error
 		)
-		if url, err = p.Interpolate(query.URL, data); err != nil {
+		if url, err = Interpolate(query.URL, data); err != nil {
 			qresponse.Error(err)
 			goto Append
 		}
@@ -531,7 +531,7 @@ func (p *PostgresTask) Run(r *http.Request, data map[string]interface{}) (respon
 		// interpolate all args
 		args = []interface{}{}
 		for _, arg := range query.Args {
-			interpolated, e := p.Interpolate(arg, data)
+			interpolated, e := Interpolate(arg, data)
 			if e != nil {
 				qresponse.Error(e)
 				goto Append
@@ -730,7 +730,7 @@ func (rt *RedisTask) Run(r *http.Request, data map[string]interface{}) (response
 		address string
 		err     error
 	)
-	if address, err = rt.Interpolate(rt.config.Address, data); err != nil {
+	if address, err = Interpolate(rt.config.Address, data); err != nil {
 		response.Error(err)
 		return
 	}
@@ -753,7 +753,7 @@ func (rt *RedisTask) Run(r *http.Request, data map[string]interface{}) (response
 		args := []interface{}{}
 		for _, arg := range query.Args {
 			var ia string
-			if ia, err = rt.Interpolate(arg, data); err != nil {
+			if ia, err = Interpolate(arg, data); err != nil {
 				qr.Error(err)
 				goto AddItem
 			}
@@ -920,7 +920,7 @@ func (c *CassandraTask) Run(r *http.Request, data map[string]interface{}) (respo
 		chosts := []string{}
 		for _, i := range query.Cluster {
 			var chost string
-			if chost, err = c.Interpolate(i, data); err != nil {
+			if chost, err = Interpolate(i, data); err != nil {
 				qr.Error(err)
 				goto Append
 			}
@@ -929,7 +929,7 @@ func (c *CassandraTask) Run(r *http.Request, data map[string]interface{}) (respo
 
 		// instantiate cluster
 		cluster = gocql.NewCluster(chosts...)
-		if cluster.Keyspace, err = c.Interpolate(query.Keyspace, data); err != nil {
+		if cluster.Keyspace, err = Interpolate(query.Keyspace, data); err != nil {
 			qr.Error(err)
 			goto Append
 		}
@@ -944,7 +944,7 @@ func (c *CassandraTask) Run(r *http.Request, data map[string]interface{}) (respo
 		}
 
 		for _, arg := range query.Args {
-			final, err := c.Interpolate(arg, data)
+			final, err := Interpolate(arg, data)
 			if err != nil {
 				qr.Error(err)
 				goto Append
@@ -1092,7 +1092,7 @@ func (m *MySQLTask) Run(r *http.Request, data map[string]interface{}) (response 
 		qr := NewResponse(http.StatusOK).StripStatusData()
 
 		var url string
-		if url, err = m.Interpolate(query.URL, data); err != nil {
+		if url, err = Interpolate(query.URL, data); err != nil {
 			qr.Error(err)
 			goto Append
 		}
@@ -1112,7 +1112,7 @@ func (m *MySQLTask) Run(r *http.Request, data map[string]interface{}) (response 
 		for _, arg := range query.Args {
 			var a string
 
-			if a, err = m.Interpolate(arg, data); err != nil {
+			if a, err = Interpolate(arg, data); err != nil {
 				qr.Error(err)
 				goto Append
 			}
@@ -1323,12 +1323,12 @@ func (f *FilesystemTask) Run(r *http.Request, data map[string]interface{}) (resp
 	_ = err
 
 	// interpolate filename
-	if filename, err = f.Interpolate(f.config.File, data); err != nil {
+	if filename, err = Interpolate(f.config.File, data); err != nil {
 		return response.Status(http.StatusInternalServerError).Error(err)
 	}
 
 	// interpolate directory
-	if directory, err = f.Interpolate(f.config.Directory, data); err != nil {
+	if directory, err = Interpolate(f.config.Directory, data); err != nil {
 		return response.Status(http.StatusInternalServerError).Error(err)
 	}
 
@@ -1368,7 +1368,7 @@ func (f *FilesystemTask) Run(r *http.Request, data map[string]interface{}) (resp
 		return response.Status(http.StatusInternalServerError).Error(err)
 	}
 
-	if output, err = f.Interpolate(f.config.Output, data); err != nil {
+	if output, err = Interpolate(f.config.Output, data); err != nil {
 		return response.Error(err).Status(http.StatusInternalServerError)
 	}
 
