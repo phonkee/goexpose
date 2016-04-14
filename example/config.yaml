@@ -7,7 +7,6 @@ endpoints:
     methods:
       GET:
         type: "info"
-        authorizers: ["custom"]
   -
     path: "/test"
     methods:

@@ -1,3 +1,6 @@
+/*
+Various http helpers and utilities
+*/
 package goexpose
 
 import (
@@ -8,18 +11,21 @@ import (
 )
 
 /*
-Various http helpers and utilities
-
 Requester
 makes http requests
 */
-
 const (
 	DEFAULT_TIMEOUT = 10 * time.Second
 )
 
+/*
+RequesterSetFunc is callback function to be called in Set method.
+ */
 type RequesterSetFunc func(r *Requester)
 
+/*
+NewRequester returns new requester instance
+ */
 func NewRequester(funcs ...RequesterSetFunc) (result *Requester) {
 	result = &Requester{}
 	result.Set(WithTimeout(DEFAULT_TIMEOUT))

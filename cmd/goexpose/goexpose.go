@@ -1,3 +1,11 @@
+/*
+Main package for goexpose binary.
+
+Goexpose provides several command line arguments such as:
+* config - configuration file
+* format - format of configuration file (json, yaml), default is json
+
+*/
 package main
 
 import (
@@ -42,5 +50,4 @@ func main() {
 		glog.Errorf("server run error: %v", err)
 		os.Exit(1)
 	}
-
 }
