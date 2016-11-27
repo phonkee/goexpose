@@ -39,9 +39,8 @@ func init() {
 		configFormats["yaml"] = func(body []byte, target interface{}) (err error){
 			if response, e := yaml.YAMLToJSON(body); e != nil {
 				err = e
-				return
 			} else {
-				return json.Unmarshal(response, target)
+				err = json.Unmarshal(response, target)
 			}
 
 			return

@@ -12,19 +12,18 @@ import (
 	"os"
 	"strings"
 
-	"github.com/gorilla/mux"
 	"github.com/golang/glog"
+	"github.com/gorilla/mux"
 )
 
 var (
-	version = "0.2"
-	logo    = `
+	logo = `
      ______  ______  ______ __  __  ______ ______  ______  ______
     /\  ___\/\  __ \/\  ___/\_\_\_\/\  == /\  __ \/\  ___\/\  ___\
     \ \ \__ \ \ \/\ \ \  __\/_/\_\/\ \  _-\ \ \/\ \ \___  \ \  __\
      \ \_____\ \_____\ \_____/\_\/\_\ \_\  \ \_____\/\_____\ \_____\
       \/_____/\/_____/\/_____\/_/\/_/\/_/   \/_____/\/_____/\/_____/
-                                                              v ` + version
+                                                            version: %v`
 )
 
 /*
@@ -33,7 +32,7 @@ Returns new server instance
 func NewServer(config *Config) (server *Server, err error) {
 	server = &Server{
 		Config:  config,
-		Version: version,
+		Version: VERSION,
 	}
 
 	return
@@ -59,7 +58,7 @@ Runs http server
 */
 func (s *Server) Run() (err error) {
 
-	glog.V(2).Info(logo)
+	glog.V(2).Infof(logo, s.Version)
 
 	if s.Router, err = s.router(); err != nil {
 		return
