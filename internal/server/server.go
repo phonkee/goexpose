@@ -111,22 +111,12 @@ func (s *Server) router(ignored ...string) (router *mux.Router, err error) {
 		)
 
 		// register route to router
-		router.HandleFunc(route.Path, s.Handle(route.Task, route.Authorizers, route.EndpointConfig, route.TaskConfig)).Methods(route.Method).Name(route.EndpointConfig.RouteName())
+		endpoint := s.Handle(route.Task, route.Authorizers, route.EndpointConfig, route.TaskConfig)
+
+		router.HandleFunc(route.Path, endpoint).Methods(route.Method).Name(route.EndpointConfig.RouteName())
 	}
 
 	return
-}
-
-/*
-Route
-*/
-type route struct {
-	Authorizers    domain.Authorizers
-	Method         string
-	Path           string
-	TaskConfig     *domain.TaskConfig
-	EndpointConfig *domain.EndpointConfig
-	Task           domain.Task
 }
 
 // GetRoutes Returns prepared routes
