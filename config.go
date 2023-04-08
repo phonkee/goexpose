@@ -3,6 +3,7 @@ package goexpose
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/mcuadros/go-defaults"
 	"github.com/phonkee/goexpose/domain"
 	"io/ioutil"
 	"net/http"
@@ -89,20 +90,19 @@ func NewConfigFromFilename(filename, format string) (config *Config, err error) 
 	return
 }
 
-/*
-Returns config with default values
-*/
+// NewConfig returns config with default values
 func NewConfig() *Config {
-	return &Config{
-		Host: "0.0.0.0",
-		Port: 9980,
-	}
+	result := Config{}
+
+	defaults.SetDefaults(&result)
+
+	return &result
 }
 
 // Config is main configuration for goexpose
 type Config struct {
-	Host        string                       `json:"host"`
-	Port        int                          `json:"port"`
+	Host        string                       `json:"host" default:"0.0.0.0"`
+	Port        int                          `json:"port" default:"9980"`
 	SSL         *SSLConfig                   `json:"ssl"`
 	PrettyJson  bool                         `json:"pretty_json"`
 	Authorizers map[string]*AuthorizerConfig `json:"authorizers"`

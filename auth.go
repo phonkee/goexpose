@@ -16,9 +16,7 @@ import (
 	"github.com/nmcclain/ldap"
 )
 
-/*
-Authorizer implements authorization
-*/
+// Authorizer implements authorization
 type Authorizer interface {
 	Authorize(r *http.Request) error
 }
@@ -29,9 +27,7 @@ func init() {
 	RegisterAuthorizer("http", HttpAuthorizerFactory)
 }
 
-/*
-AuthFactory returns new authorizer
-*/
+// AuthorizerFactory returns new authorizer
 type AuthorizerFactory func(config *AuthorizerConfig) (Authorizer, error)
 
 var (
@@ -39,9 +35,6 @@ var (
 	authorizerslock = &sync.RWMutex{}
 )
 
-/*
-Register authorizer
-*/
 func RegisterAuthorizer(id string, factory AuthorizerFactory) {
 	authorizerslock.Lock()
 	defer authorizerslock.Unlock()
