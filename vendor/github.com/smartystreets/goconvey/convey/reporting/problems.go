@@ -54,6 +54,9 @@ func (self *problem) showFailures() {
 			self.out.Indent()
 		}
 		self.out.Println(failureTemplate, f.File, f.Line, f.Failure)
+		if f.StackTrace != "" {
+			self.out.Println(stackTemplate, f.StackTrace)
+		}
 	}
 }
 

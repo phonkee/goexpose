@@ -130,10 +130,11 @@ func (r *Response) Result(result interface{}) *Response {
 }
 
 /*
-Set raw response
+Raw Sets raw response
 param can be following:
+
 	nil => clear raw
-	raw is fmt.Stringer or string => convert to []byte
+	fmt.Stringer or string => convert to []byte
 	[]byte leave as it is
 	otherwise try to marshal to json []byte
 */
@@ -275,7 +276,7 @@ func (r *Response) StripStatusData() *Response {
 
 /*
 Updates stripped status data
- */
+*/
 func (r *Response) UpdateStatusData() *Response {
 	return r.Status(r.status)
 }

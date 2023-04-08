@@ -2,18 +2,19 @@ package goexpose
 
 import (
 	"fmt"
+	"github.com/phonkee/goexpose/domain"
 	"sync"
 )
 
 var (
-	taskregistry     = map[string]TaskFactory{}
+	taskregistry     = map[string]func(server Server, config *domain.TaskConfig, ec *domain.EndpointConfig) ([]domain.Tasker, error){}
 	taskregistrylock = &sync.RWMutex{}
 )
 
 /*
 Registers task factory to server
 */
-func RegisterTaskFactory(id string, factory TaskFactory) {
+func RegisterTaskFactory(id string, factory func(server Server, config *domain.TaskConfig, ec *domain.EndpointConfig) ([]func(server Server, config *domain.TaskConfig, ec *domain.EndpointConfig) ([]domain.Tasker, error), error)) {
 	taskregistrylock.Lock()
 	defer taskregistrylock.Unlock()
 
@@ -26,10 +27,8 @@ func RegisterTaskFactory(id string, factory TaskFactory) {
 	return
 }
 
-/*
-Returns task factory by id
-*/
-func getTaskFactory(id string) (factory TaskFactory, ok bool) {
+// GetTaskFactory returns task factory by id
+func GetTaskFactory(id string) (factory func(server Server, config *domain.TaskConfig, ec *domain.EndpointConfig) ([]func(server Server, config *domain.TaskConfig, ec *domain.EndpointConfig) ([]domain.Tasker, error), error), ok bool) {
 	taskregistrylock.RLock()
 	defer taskregistrylock.RUnlock()
 

@@ -57,6 +57,7 @@ var (
 	dotSkip         = "S"
 	errorTemplate   = "* %s \nLine %d: - %v \n%s\n"
 	failureTemplate = "* %s \nLine %d:\n%s\n"
+	stackTemplate   = "%s\n"
 )
 
 var (
@@ -71,7 +72,7 @@ var consoleStatistics = NewStatisticsReporter(NewPrinter(NewConsole()))
 func SuppressConsoleStatistics() { consoleStatistics.Suppress() }
 func PrintConsoleStatistics()    { consoleStatistics.PrintSummary() }
 
-// QuiteMode disables all console output symbols. This is only meant to be used
+// QuietMode disables all console output symbols. This is only meant to be used
 // for tests that are internal to goconvey where the output is distracting or
 // otherwise not needed in the test output.
 func QuietMode() {

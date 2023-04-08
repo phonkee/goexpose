@@ -1,10 +1,9 @@
 package goexpose
 
 import (
-	"crypto/sha256"
 	"encoding/json"
 	"fmt"
-	"io"
+	"github.com/phonkee/goexpose/domain"
 	"io/ioutil"
 	"net/http"
 	"path/filepath"
@@ -12,8 +11,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/ghodss/yaml"
 	"errors"
+	"github.com/ghodss/yaml"
 )
 
 type unmarshalFunc func([]byte, interface{}) error
@@ -36,7 +35,7 @@ func init() {
 
 		// custom yaml unmarshal, since when used directly it panics.
 		// so we just convert yaml to json and call json unmarshal
-		configFormats["yaml"] = func(body []byte, target interface{}) (err error){
+		configFormats["yaml"] = func(body []byte, target interface{}) (err error) {
 			if response, e := yaml.YAMLToJSON(body); e != nil {
 				err = e
 			} else {
@@ -100,92 +99,21 @@ func NewConfig() *Config {
 	}
 }
 
-/*
-Main config
-*/
+// Config is main configuration for goexpose
 type Config struct {
 	Host        string                       `json:"host"`
 	Port        int                          `json:"port"`
 	SSL         *SSLConfig                   `json:"ssl"`
 	PrettyJson  bool                         `json:"pretty_json"`
 	Authorizers map[string]*AuthorizerConfig `json:"authorizers"`
-	Endpoints   []*EndpointConfig            `json:"endpoints"`
+	Endpoints   []*domain.EndpointConfig     `json:"endpoints"`
 	ReloadEnv   bool                         `json:"reload_env"`
 	Directory   string                       `json:"-"`
 }
 
-/*
-SSL config
-*/
 type SSLConfig struct {
 	Cert string `json:"cert"`
 	Key  string `json:"key"`
-}
-
-/*
-Task config
-*/
-type TaskConfig struct {
-	Type        string          `json:"type"`
-	Authorizers []string        `json:"authorizers"`
-	Config      json.RawMessage `json:"config"`
-	QueryParams *QueryParams    `json:"query_params"`
-	Description string          `json:"description"`
-}
-
-type EndpointConfig struct {
-	Authorizers []string              `json:"authorizers"`
-	Path        string                `json:"path"`
-	Methods     map[string]TaskConfig `json:"methods"`
-	Type        string                `json:"type"`
-	QueryParams *QueryParams          `json:"query_params"`
-	RawResponse bool                  `json:"raw_response"`
-}
-
-func (e *EndpointConfig) Validate() (err error) {
-
-	if e.QueryParams != nil {
-		if err = e.QueryParams.Validate(); err != nil {
-			return
-		}
-	}
-
-	// set type to unset tasks
-	e.Type = strings.TrimSpace(e.Type)
-	if e.Type != "" {
-		for _, tc := range e.Methods {
-			if tc.Type == "" {
-				tc.Type = e.Type
-			}
-		}
-	}
-
-	return
-}
-
-func (e *EndpointConfig) RouteName() string {
-	hash := sha256.New()
-	io.WriteString(hash, e.Path)
-	return fmt.Sprintf("%x", hash.Sum(nil))
-}
-
-/*
-Validate method validates task config
-*/
-func (t *TaskConfig) Validate() (err error) {
-	t.Type = strings.TrimSpace(t.Type)
-	t.Description = strings.TrimSpace(t.Description)
-	if t.Type == "" {
-		return fmt.Errorf("Invalid task type")
-	}
-
-	if t.QueryParams != nil {
-		if err = t.QueryParams.Validate(); err != nil {
-			return
-		}
-	}
-
-	return
 }
 
 /*

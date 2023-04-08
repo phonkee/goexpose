@@ -20,12 +20,12 @@ const (
 
 /*
 RequesterSetFunc is callback function to be called in Set method.
- */
+*/
 type RequesterSetFunc func(r *Requester)
 
 /*
 NewRequester returns new requester instance
- */
+*/
 func NewRequester(funcs ...RequesterSetFunc) (result *Requester) {
 	result = &Requester{}
 	result.Set(WithTimeout(DEFAULT_TIMEOUT))
@@ -83,10 +83,10 @@ func WithTimeout(timeout time.Duration) RequesterSetFunc {
 		r.timeout = timeout
 		r.client = &http.Client{
 			Transport: &http.Transport{
-				Dial: (&net.Dialer{
+				DialContext: (&net.Dialer{
 					Timeout: r.timeout,
 					//KeepAlive: 30 * time.Second,
-				}).Dial,
+				}).DialContext,
 				//TLSHandshakeTimeout: secs * time.Second,
 			},
 		}

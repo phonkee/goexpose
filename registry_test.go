@@ -17,11 +17,11 @@ func TestRegistry(t *testing.T) {
 		RegisterTaskFactory("example", ExampleTaskFactory)
 		So(func() { RegisterTaskFactory("example", ExampleTaskFactory) }, ShouldPanic)
 
-		tf, ok := getTaskFactory("example")
+		tf, ok := GetTaskFactory("example")
 		So(ok, ShouldBeTrue)
 		So(tf, ShouldEqual, tf)
 
-		_, ok = getTaskFactory("nonexisting")
+		_, ok = GetTaskFactory("nonexisting")
 		So(ok, ShouldBeFalse)
 	})
 

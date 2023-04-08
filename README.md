@@ -1,7 +1,7 @@
 # Goexpose
 
 Goexpose is lightweight json api server that maps url path to various tasks.
-Goexpose can be used in various scenarios: either make call commands on your servers (or 
+Goexpose can be used in various scenarios: either make call commands on your servers (or
 farm of servers), or you can use it as monitoring tool.
 Builtin tasks are currently:
 
@@ -21,41 +21,32 @@ All these commands can accepts variables from route (gorilla mux is used).
 GOexpose has system for authorization, currently basic (username password) is implemented.
 In the future more types of authorization will be implemented.
 
-
 Lets see example configuration file:
 
-```json
-{
-    "host": "127.0.0.1",
-    "port": 9900,
-    "ssl": {
-        "cert": "./cert.pem",
-        "key": "./key.pem"
-    },
-    "reload_env": true,
-    "endpoints": [{
-        "path": "/info",
-        "authorizers": ["basic"],
-        "methods": {
-            "GET": {
-                "type": "info",
-                "description": "Info task"
-            }
-        }
-    }],
-    "authorizers": {
-        "basic": {
-            "type": "basic",
-            "config": {
-                "username": "hello",
-                "password": "world"
-            }
-        }
-    }
-}
+```yaml
+host: 127.0.0.1
+port: 9900
+ssl:
+  cert: ./cert.pem
+  key: ./key.pem
+reload_env: true
+endpoints:
+  - path: /info
+    authorizers:
+      - basic
+    methods:
+      GET:
+        type: info
+        description: Info task
+authorizers:
+  basic:
+    type: basic
+    config:
+      username: hello
+      password: world
 ```
 
-This means that Goexpose will listen on https://127.0.0.1:9900 
+This means that Goexpose will listen on https://127.0.0.1:9900
 "endpoints" is a list of defined endpoints that goexpose responds to.
 
 You can also write your configuration in yaml format(command line arg `-format`)
@@ -64,40 +55,51 @@ You can also write your configuration in yaml format(command line arg `-format`)
 
 * host - host that we will listen on
 * port - port number
-* ssl - ssl settings 
+* ssl - ssl settings
     * cert - cert file
     * key - key file
 * reload_env - reload env variables on every request
-* endpoints - list of endpoints, config for endpoint:    
+* endpoints - list of endpoints, config for endpoint:
     * path - url path
     * authorizers - list of authorizers applied to this endpoint (see Authorizers)
     * methods - dictionary that maps http method to task
-        
 
 ## Installation:
 
-Run go install 
-    
-    go install github.com/phonkee/goexpose
+Run go install
 
+    go install github.com/phonkee/goexpose
 
 ## Interpolation:
 
 Goexpose provides various variables from url, query, request.
 This data is available in commands to interpolate various strings.
 text/template is used and available data is in this structure:
-   
+
 ```json
 {
-    "url": {},
-    "query": {},
-    "request": {
-        "method": "",
-        "body": ""
-    },
-    "env": {}
+  "url": {},
+  "query": {},
+  "request": {
+    "method": "",
+    "body": ""
+  },
+  "env": {}
 }
 ```
+
+```yaml
+url:
+  __help__: "url variables"
+query:
+  __help__: "query variables"
+request:
+  __help__: "request variables"
+  method: ""
+  body: ""
+```
+
+
 * env - environment variables
 * url - variables from url regular expressions
 * query - query values from "query_params"
@@ -117,28 +119,30 @@ Configuration:
 
 ```json
 {
-    "query_params": {
-        "return_params": true,
-        "params": [{
-            "name": "page",
-            "regexp": "^[0-9]+$",
-            "default": "0"
-        }, {
-            "name": "limit",
-            "regexp": "^[0-9]+$",
-            "default": "10"
-        }]
-    }
+  "query_params": {
+    "return_params": true,
+    "params": [
+      {
+        "name": "page",
+        "regexp": "^[0-9]+$",
+        "default": "0"
+      },
+      {
+        "name": "limit",
+        "regexp": "^[0-9]+$",
+        "default": "10"
+      }
+    ]
+  }
 }
 ```
 
 ## Formats:
 
-
 http task and shell task have possibility to set format of response.
 Currently available formats are: "json", "jsonlines", "lines", "text".
 Format can be combination of multiple formats. e.g.
-    
+
     "format": "json|jsonlines"
 
 First format that returns result without error will be used.
@@ -146,24 +150,26 @@ If "text" is not found in format, it is automatically inserted to the end.
 
 ## Tasks:
 
-Tasks can be configured in config["methods"] which is a map[string]TaskConfig - 
+Tasks can be configured in config["methods"] which is a map[string]TaskConfig -
 http method to task.
 Every task config has common part and configuration for given task.
 Common configuration is:
 
 ```json
 {
-    "type": "http",
-    "authorizers": [],
-    "config": {},
-    "query_params": {
-        "params": [{
-            "name": "id",
-            "regexp": "^[0-9]+$",
-            "default": "0"
-        }],
-        "return_params": true
-    }
+  "type": "http",
+  "authorizers": [],
+  "config": {},
+  "query_params": {
+    "params": [
+      {
+        "name": "id",
+        "regexp": "^[0-9]+$",
+        "default": "0"
+      }
+    ],
+    "return_params": true
+  }
 }
 ```
 
@@ -173,30 +179,32 @@ Common configuration is:
 * query_params - query params (see Query Params)
 * return_params - whether goexpose should return those params in response
 
-
 ### HttpTask:
 
 Http task is task that can do external request. Task configuration is following:
 
 ```json
 {
-    "type": "http",
-    "config": {
-        "single_result": 0,
-        "urls": [{
-            "url": "http://127.0.0.1:8000/{{.url.id}}",
-            "post_body": false,
-            "format": "json",
-            "return_headers": false
-        }, {
-            "url": "http://127.0.0.1:8000/{{.url.id}}",
-            "method": "PUT",
-            "post_body": false,
-            "format": "json",
-            "return_headers": false,
-            "post_body": true,
-        }]
-    }
+  "type": "http",
+  "config": {
+    "single_result": 0,
+    "urls": [
+      {
+        "url": "http://127.0.0.1:8000/{{.url.id}}",
+        "post_body": false,
+        "format": "json",
+        "return_headers": false
+      },
+      {
+        "url": "http://127.0.0.1:8000/{{.url.id}}",
+        "method": "PUT",
+        "post_body": false,
+        "format": "json",
+        "return_headers": false,
+        "post_body": true
+      }
+    ]
+  }
 }
 ```
 
@@ -205,15 +213,14 @@ Configuration:
 * urls - list of url configurations
     * url - url to send request to, url is interpolated (see Interpolation)
     * method - request to url will not have the same method as request to goexpose, given method value
-        will be used
+      will be used
     * format - format of response, if no format is given goexpose will try to read Content-Type, if application/json
-        (see Formats)
+      (see Formats)
     * return_headers - whether to return response headers from url response to goexpose response
     * post_body - if goexpose should post body of goexpose request to url
 * single_result - only that result will be returned (unwrapped from array)
 
 ### ShellTask:
-
 
 ShellTask is task that is able to run shell commands on target server. Every command
 is interpolated (see Interpolation)
@@ -224,19 +231,21 @@ Example:
 
 ```json
 {
-    "type": "shell",
-    "config": {
-        "env": {
-            "key": "value"
-        },
-        "shell": "/bin/bash",
-        "commands": [{
-            "command": "echo \"{{.url.id}}\"",
-            "chdir": "/tmp",
-            "format": "json",
-            "return_command": true
-        }]
-    }
+  "type": "shell",
+  "config": {
+    "env": {
+      "key": "value"
+    },
+    "shell": "/bin/bash",
+    "commands": [
+      {
+        "command": "echo \"{{.url.id}}\"",
+        "chdir": "/tmp",
+        "format": "json",
+        "return_command": true
+      }
+    ]
+  }
 }
 ```
 
@@ -253,7 +262,6 @@ Configuration:
 
 ### InfoTask:
 
-
 Info task returns information about goexpose. In result you can find version of goexpose and also
 all registered tasks with info. Task info has no configuration.
 
@@ -263,23 +271,25 @@ Run queries on postgres database. Configuration for postgres task:
 
 ```json
 {
-    "type": "postgres",
-    "config": {
-        "return_queries": true,
-        "queries": [{
-            "url": "postgres://username:password@localhost/database",
-            "query": "SELECT * FROM product WHERE id = $1",
-            "args": [
-                "{{.url.id}}"
-            ]
-        }]
-    }
+  "type": "postgres",
+  "config": {
+    "return_queries": true,
+    "queries": [
+      {
+        "url": "postgres://username:password@localhost/database",
+        "query": "SELECT * FROM product WHERE id = $1",
+        "args": [
+          "{{.url.id}}"
+        ]
+      }
+    ]
+  }
 }
 ```
 
 Configuration:
 
-* return_queries - whether queries with args should be added 
+* return_queries - whether queries with args should be added
 * queries - list of queries
     * url - postgres url (passed to sql.Open, refer to https://github.com/lib/pq), interpolated (see Interpolation)
     * methods - allowed methods, if not specified all methods are allowed
@@ -293,31 +303,33 @@ Task that can run multiple commands on redis. Example:
 
 ```json
 {
-    "type": "redis",
-    "config": {
-        "address": "127.0.0.1:6379",
-        "network": "tcp",
-        "database": 1,
-        "return_queries": true,
-        "queries": [{
-            "command": "GET",
-            "args": [
-                "product:{{.url.id}}"
-            ],
-            "type": "string"
-        }]
-    }
+  "type": "redis",
+  "config": {
+    "address": "127.0.0.1:6379",
+    "network": "tcp",
+    "database": 1,
+    "return_queries": true,
+    "queries": [
+      {
+        "command": "GET",
+        "args": [
+          "product:{{.url.id}}"
+        ],
+        "type": "string"
+      }
+    ]
+  }
 }
 ```
-    
+
 Configuration:
-  
+
 * address - address to connect to (see http://godoc.org/github.com/garyburd/redigo/redis#Dial)
-    Default: ":6379", interpolated (see Interpolation)
+  Default: ":6379", interpolated (see Interpolation)
 * network - network (see http://godoc.org/github.com/garyburd/redigo/redis#Dial)
-    Default: "tcp"
+  Default: "tcp"
 * database - database number
-    Default: 1
+  Default: 1
 * return_queries - whether to return queries in response
 * queries - list of queries settings
     * command - redis command
@@ -341,21 +353,23 @@ Run cassandra queries task. Example:
 
 ```json
 {
-    "type": "cassandra",
-    "config": {
-        "return_queries": true,
-        "queries": [{
-            "query": "SELECT * from user WHERE id = ?",
-            "args": [
-                "{{.url.id}}"
-            ],
-            "cluster": [
-                "192.168.1.1",
-                "192.168.1.2"
-            ],
-            "keyspace": "keyspace"
-        }]
-    }
+  "type": "cassandra",
+  "config": {
+    "return_queries": true,
+    "queries": [
+      {
+        "query": "SELECT * from user WHERE id = ?",
+        "args": [
+          "{{.url.id}}"
+        ],
+        "cluster": [
+          "192.168.1.1",
+          "192.168.1.2"
+        ],
+        "keyspace": "keyspace"
+      }
+    ]
+  }
 }
 ```
 
@@ -369,24 +383,25 @@ Configuration:
     * keyspace - keyspace to use, interpolated (see Interpolation)
 * single_result - index which query will be "unwrapped" from result array
 
-
 ### MySQLTask:
 
 Run mysql queries. Example:
 
 ```json
 {
-    "type": "mysql",
-    "config": {
-        "return_queries": true,
-        "queries": [{
-            "url": "user:password@localhost/dbname",
-            "query": "SELECT * FROM auth_user WHERE id = ?",
-            "args": [
-                "{{.url.id}}"
-            ]
-        }]
-    }
+  "type": "mysql",
+  "config": {
+    "return_queries": true,
+    "queries": [
+      {
+        "url": "user:password@localhost/dbname",
+        "query": "SELECT * FROM auth_user WHERE id = ?",
+        "args": [
+          "{{.url.id}}"
+        ]
+      }
+    ]
+  }
 }
 ```
 
@@ -401,30 +416,34 @@ Configuration:
 
 ### MultiTask:
 
-Multi task gives possibility to run multiple tasks in one task. These task can be any tasks (except of embedded multi task).
+Multi task gives possibility to run multiple tasks in one task. These task can be any tasks (except of embedded multi
+task).
 
 ```json
 {
-    "type": "multi",
-    "config": {
-        "single_result": 0,
-        "tasks": [{
-            "type": "http",
-            "config": {
-            "single_result": 0,
-            "urls": [{
-                "url": "http://www.google.com"
-            }]
+  "type": "multi",
+  "config": {
+    "single_result": 0,
+    "tasks": [
+      {
+        "type": "http",
+        "config": {
+          "single_result": 0,
+          "urls": [
+            {
+              "url": "http://www.google.com"
+            }
+          ]
         }
-    }]        
-}
+      }
+    ]
+  }
 ```
 
 Configuration:
 
 * single_result - index which task will be "unwrapped" from result array
 * tasks - list of tasks (these embedded tasks does not support authorizers)
-
 
 ### FilesystemTask:
 
@@ -435,41 +454,43 @@ In following example we serve only one file on url /file/some. The output will b
 
 ```json
 {
-    "path": "/file/some",
-    "methods": {
-        "GET": {
-            "type": "filesystem",
-            "config": {
-                "file": "/tmp/file"
-            }
-        }
+  "path": "/file/some",
+  "methods": {
+    "GET": {
+      "type": "filesystem",
+      "config": {
+        "file": "/tmp/file"
+      }
     }
+  }
 }
 ```
 
-In next example we will serve files in directory and provide index page for directories and also give possibility to 
+In next example we will serve files in directory and provide index page for directories and also give possibility to
 return raw file as response.
 
 ```json
 {
-    "path": "/static/{file:.+}",
-    "methods": {
-        "GET": {
-            "query_params": {
-                "params": [{
-                    "name": "output",
-                    "regexp": "^raw$",
-                    "default": ""
-                }],
-            },                
-            "config": {
-                "file": "{{.url.file}}",
-                "output": "{{.query.output}}",
-                "directory": "/tmp",
-                "index": true
-            }
-        }
+  "path": "/static/{file:.+}",
+  "methods": {
+    "GET": {
+      "query_params": {
+        "params": [
+          {
+            "name": "output",
+            "regexp": "^raw$",
+            "default": ""
+          }
+        ]
+      },
+      "config": {
+        "file": "{{.url.file}}",
+        "output": "{{.query.output}}",
+        "directory": "/tmp",
+        "index": true
+      }
     }
+  }
 }
 ```
 
@@ -481,6 +502,30 @@ Configuration:
     * "raw" - returns raw file contents, otherwise it's wrapped to json
 * index - whether to serve index endpoint for directory
 
+### EmailTask:
+
+EmailTask gives ability to send emails. It uses smtp server to send emails.
+
+```yaml
+task:
+  type: email
+  smtp:
+    host: smtp.gmail.com
+    port: 587
+    username: user
+    password: pass
+  sender: sender@outlook.com
+  recipients:
+    - phonkee@phonkee.eu
+  data:
+    something: hello
+    # not allowed url, query, request (these are reserved)
+  subject: Hello {{.data.something}}
+  body: Hello {{.data.something}}
+  body_filename: "email.html"
+  # when debug is true, email is not sent, but returned as html page
+  debug: true
+```
 
 ## Authorizers:
 
@@ -488,27 +533,30 @@ Types of authentication ( I know it's silly name..)
 First you have to define your authorizers in top level "authorizers" and then you can use
 them in your tasks defined by name. e.g.:
 
-
 ```json
 {
-    "endpoints": [{
-        "path": "/info",
-        "authorizers": ["username_pass"],
-        "methods": {
-            "GET": {
-                "type": "info",
-            }
+  "endpoints": [
+    {
+      "path": "/info",
+      "authorizers": [
+        "username_pass"
+      ],
+      "methods": {
+        "GET": {
+          "type": "info"
         }
-    }],
-    "authorizers": {
-        "username_pass": {
-            "type": "basic",
-            "config": {
-                "username": "hello",
-                "password": "world"
-            }
-        }
+      }
     }
+  ],
+  "authorizers": {
+    "username_pass": {
+      "type": "basic",
+      "config": {
+        "username": "hello",
+        "password": "world"
+      }
+    }
+  }
 }
 ```
 
@@ -521,11 +569,11 @@ Support for basic authentication.
 
 ```json
 {
-    "type": "basic",
-    "config": {
-        "username": "hello",
-        "password": "world"
-    }
+  "type": "basic",
+  "config": {
+    "username": "hello",
+    "password": "world"
+  }
 }
 ```
 
@@ -535,18 +583,19 @@ Support for LDAP authentication.
 
 ```json
 {
-    "type": "ldap",
-    "config": {
-        "host": "localhost",
-        "port": 1234,
-        "network": "tls"
-    }
+  "type": "ldap",
+  "config": {
+    "host": "localhost",
+    "port": 1234,
+    "network": "tls"
+  }
 }
 ```
 
 Configuration:
+
 * host - host of ldap server (default `localhost`)
-* port - port of ldap server (default `389`) 
+* port - port of ldap server (default `389`)
 * network - one of `tcp`, `tls` (default `tcp`)
 * whitelist - list of usernames that can access goexpose endpoint
 * blacklist - list of usernames that are blacklisted to access endpoint
@@ -560,16 +609,17 @@ Request to goexpose is allowed when the http call returns status code `200`. Oth
 
 ```json
 {
-    "type": "http",
-    "config": {
-        "url": "http://localhost:8080/api/users/login",
-        "data": "{\"username\": \"{{.username}}\", \"password\": \"{{.password}}\"}",
-        "method": "post"
-    }
+  "type": "http",
+  "config": {
+    "url": "http://localhost:8080/api/users/login",
+    "data": "{\"username\": \"{{.username}}\", \"password\": \"{{.password}}\"}",
+    "method": "post"
+  }
 }
 ```
 
 Configuration:
+
 * url - url to which goexpose make request. Interpolated (username, password)
 * data - post data (such as json, url values). Interpolated (username, password)
 * method - http method. Interpolated (username, password)
@@ -581,6 +631,7 @@ You can find example [here!](example/config.json) or [yaml!](example/config.yaml
 
 @TODO:
 Add tasks for: sqlite, memcached, mongodb
-  
+
 ## Author:
+
 phonkee

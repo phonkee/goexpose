@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"github.com/phonkee/goexpose/domain"
 	"net/http"
 	"strings"
 	"sync"
@@ -69,12 +70,10 @@ func AuthorizerExists(id string) (ok bool) {
 	return
 }
 
-/*
-Returns authorizers for given config
-First step is that it validates authorizers
-*/
-func GetAuthorizers(config *Config) (result Authorizers, err error) {
-	result = Authorizers{}
+// Returns authorizers for given config
+// First step is that it validates authorizers
+func GetAuthorizers(config *Config) (result domain.Authorizers, err error) {
+	result = domain.Authorizers{}
 	authorizerslock.RLock()
 	defer authorizerslock.RUnlock()
 
@@ -119,40 +118,6 @@ func GetAuthorizers(config *Config) (result Authorizers, err error) {
 /*
 Authorizers will have method that will check all authorizers
 */
-type Authorizers map[string]Authorizer
-
-/*
-Try all authorizers, first that will fail with error, that error will be returned
-*/
-func (a Authorizers) Authorize(r *http.Request, config *EndpointConfig) (err error) {
-	check := []string{}
-	for _, an := range config.Authorizers {
-		check = append(check, an)
-	}
-	for _, an := range config.Methods[r.Method].Authorizers {
-		check = append(check, an)
-	}
-
-	for _, an := range check {
-		authorizer := a[an]
-		if err = authorizer.Authorize(r); err != nil {
-			return
-		}
-	}
-	return
-}
-
-/*
-Returns names of all authorizerse
-*/
-func (a Authorizers) Names() []string {
-	result := make([]string, 0, len(a))
-	for k, _ := range a {
-		result = append(result, k)
-	}
-	return result
-}
-
 /*
 Basic auth provides method GetBasicAuth from request headers
 */

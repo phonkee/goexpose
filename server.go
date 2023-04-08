@@ -2,11 +2,12 @@ package goexpose
 
 import (
 	"fmt"
+	"github.com/phonkee/goexpose/domain"
+	"io"
 	"net/http"
 
 	"time"
 
-	"io/ioutil"
 	"runtime/debug"
 
 	"os"
@@ -26,9 +27,7 @@ var (
                                                             version: %v`
 )
 
-/*
-Returns new server instance
-*/
+// NewServer returns new server instance
 func NewServer(config *Config) (server *Server, err error) {
 	server = &Server{
 		Config:  config,
@@ -38,9 +37,7 @@ func NewServer(config *Config) (server *Server, err error) {
 	return
 }
 
-/*
-Goexpose server
-*/
+// Server is goexpose server
 type Server struct {
 
 	// config instance
@@ -112,12 +109,12 @@ func (s *Server) router(ignored ...string) (router *mux.Router, err error) {
 Route
 */
 type route struct {
-	Authorizers    Authorizers
+	Authorizers    domain.Authorizers
 	Method         string
 	Path           string
-	TaskConfig     *TaskConfig
-	EndpointConfig *EndpointConfig
-	Task           Tasker
+	TaskConfig     *domain.TaskConfig
+	EndpointConfig *domain.EndpointConfig
+	Task           domain.Tasker
 }
 
 /*
@@ -125,10 +122,10 @@ Returns prepared routes
 */
 func (s *Server) routes(ignored ...string) (routes []*route, err error) {
 	var (
-		authorizers Authorizers
-		factory     TaskFactory
+		authorizers domain.Authorizers
+		factory     domain.TaskFactory
 		ok          bool
-		tasks       []Tasker
+		tasks       []domain.Tasker
 	)
 
 	routes = []*route{}
@@ -158,7 +155,7 @@ Outer:
 				return
 			}
 
-			if factory, ok = getTaskFactory(taskconf.Type); !ok {
+			if factory, ok = GetTaskFactory(taskconf.Type); !ok {
 				err = fmt.Errorf("task %s doesn't exist", taskconf.Type)
 				return
 			}
@@ -192,7 +189,7 @@ Outer:
 /*
 Handle func
 */
-func (s *Server) Handle(task Tasker, authorizers Authorizers, ec *EndpointConfig, tc *TaskConfig) http.HandlerFunc {
+func (s *Server) Handle(task domain.Tasker, authorizers domain.Authorizers, ec *domain.EndpointConfig, tc *domain.TaskConfig) http.HandlerFunc {
 
 	env := s.GetEnv()
 
@@ -214,7 +211,7 @@ func (s *Server) Handle(task Tasker, authorizers Authorizers, ec *EndpointConfig
 		// read request body
 		var body = ""
 		if r.Body != nil {
-			if b, err := ioutil.ReadAll(r.Body); err != nil {
+			if b, err := io.ReadAll(r.Body); err != nil {
 				body = string(b)
 			}
 		}
@@ -257,7 +254,9 @@ func (s *Server) Handle(task Tasker, authorizers Authorizers, ec *EndpointConfig
 			}
 		}
 
-		response.Write(w, r, t)
+		if err := response.Write(w, r, t); err != nil {
+			glog.Errorf("Error while writing response: %s", err)
+		}
 	}
 }
 
@@ -272,7 +271,7 @@ func (s *Server) NotFoundHandler(w http.ResponseWriter, r *http.Request) {
 /*
 Returns
 */
-func (s *Server) GetQueryParams(r *http.Request, ec *EndpointConfig) (result map[string]string) {
+func (s *Server) GetQueryParams(r *http.Request, ec *domain.EndpointConfig) (result map[string]string) {
 	result = map[string]string{}
 	if ec.QueryParams != nil {
 		result = ec.QueryParams.GetParams(r)
