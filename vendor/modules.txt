@@ -60,6 +60,12 @@ github.com/nmcclain/asn1-ber
 # github.com/nmcclain/ldap v0.0.0-20160601145537-6e14e8271933
 ## explicit
 github.com/nmcclain/ldap
+# github.com/phonkee/go-response v0.3.4
+## explicit; go 1.18
+github.com/phonkee/go-response
+# github.com/pkg/errors v0.9.1
+## explicit
+github.com/pkg/errors
 # github.com/pmezard/go-difflib v1.0.0
 ## explicit
 # github.com/smartystreets/assertions v1.2.0

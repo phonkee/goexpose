@@ -7,31 +7,29 @@ import (
 )
 
 var (
-	taskregistry     = map[string]func(server Server, config *domain.TaskConfig, ec *domain.EndpointConfig) ([]domain.Tasker, error){}
-	taskregistrylock = &sync.RWMutex{}
+	taskRegistry     = map[string]domain.TaskFactory{}
+	taskRegistryLock = &sync.RWMutex{}
 )
 
-/*
-Registers task factory to server
-*/
-func RegisterTaskFactory(id string, factory func(server Server, config *domain.TaskConfig, ec *domain.EndpointConfig) ([]func(server Server, config *domain.TaskConfig, ec *domain.EndpointConfig) ([]domain.Tasker, error), error)) {
-	taskregistrylock.Lock()
-	defer taskregistrylock.Unlock()
+// RegisterTaskFactory registers task factory to server
+func RegisterTaskFactory(id string, factory domain.TaskFactory) {
+	taskRegistryLock.Lock()
+	defer taskRegistryLock.Unlock()
 
-	if _, ok := taskregistry[id]; ok {
+	if _, ok := taskRegistry[id]; ok {
 		panic(fmt.Sprintf("task factory %s already exists", id))
 	}
 
 	// add to registry
-	taskregistry[id] = factory
+	taskRegistry[id] = factory
 	return
 }
 
 // GetTaskFactory returns task factory by id
-func GetTaskFactory(id string) (factory func(server Server, config *domain.TaskConfig, ec *domain.EndpointConfig) ([]func(server Server, config *domain.TaskConfig, ec *domain.EndpointConfig) ([]domain.Tasker, error), error), ok bool) {
-	taskregistrylock.RLock()
-	defer taskregistrylock.RUnlock()
+func GetTaskFactory(id string) (factory domain.TaskFactory, ok bool) {
+	taskRegistryLock.RLock()
+	defer taskRegistryLock.RUnlock()
 
-	factory, ok = taskregistry[id]
+	factory, ok = taskRegistry[id]
 	return
 }

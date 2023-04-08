@@ -1,26 +1,45 @@
 package tasks
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"github.com/mcuadros/go-defaults"
 	_ "github.com/mcuadros/go-defaults"
+	"github.com/phonkee/go-response"
 	"github.com/phonkee/goexpose"
 	"github.com/phonkee/goexpose/domain"
 	"gopkg.in/gomail.v2"
 	_ "gopkg.in/gomail.v2"
 	"math/rand"
 	"net/http"
+	"net/mail"
 	"os"
 	"strings"
 	"text/template"
 
+	_ "embed"
 	htmlTemplate "html/template"
 	textTemplate "text/template"
 )
 
+func init() {
+	goexpose.RegisterTaskFactory("email", EmailTaskFactory)
+}
+
+var (
+	//go:embed templates/debug.html
+	debugTemplateString = ""
+	debugTemplate       *textTemplate.Template
+)
+
+func init() {
+	// pre-compile debug template
+	debugTemplate = textTemplate.Must(textTemplate.New("debug").Parse(debugTemplateString))
+}
+
 // EmailTaskFactory creates email task from single task config
-func EmailTaskFactory(server goexpose.Server, taskconfig *domain.TaskConfig, ec *domain.EndpointConfig) (tasks []domain.Tasker, err error) {
+func EmailTaskFactory(server domain.Server, taskconfig *domain.TaskConfig, ec *domain.EndpointConfig) (tasks []domain.Task, err error) {
 
 	// first create config with default values
 	config := NewEmailTaskConfig()
@@ -47,7 +66,7 @@ func EmailTaskFactory(server goexpose.Server, taskconfig *domain.TaskConfig, ec 
 		}
 	}
 
-	return []domain.Tasker{config}, nil
+	return []domain.Task{config}, nil
 }
 
 // NewEmailTaskConfig instantiates new email task config with default values
@@ -77,10 +96,10 @@ type EmailTaskConfig struct {
 	BodyFilename string                 `json:"body_filename"`
 	Debug        bool                   `json:"debug"`
 	Html         bool                   `json:"html"`
-
-	contentType     string                  `json:"-"`
-	subjectTemplate domain.TemplateExecutor `json:"-"`
-	bodyTemplate    domain.TemplateExecutor `json:"-"`
+	// private parts (do not look)
+	contentType     string
+	subjectTemplate domain.TemplateExecutor
+	bodyTemplate    domain.TemplateExecutor
 }
 
 // compile templates
@@ -127,28 +146,78 @@ func (e *EmailTaskConfig) compile() (err error) {
 
 // Validate configuration
 func (e *EmailTaskConfig) Validate() error {
+
+	// sender is always required
 	if sender := strings.TrimSpace(e.Sender); sender == "" {
 		return domain.ErrInvalidSender
 	}
 
+	// if not debug, recipients must be set
 	if !e.Debug {
 		if len(e.Recipients) == 0 {
 			return domain.ErrMissingRecipients
 		}
+		recipients := make([]string, 0, len(e.Recipients))
 		for _, recipient := range e.Recipients {
 			if strings.TrimSpace(recipient) == "" {
 				return domain.ErrInvalidRecipient
+			} else {
+				if address, err := mail.ParseAddress(recipient); err != nil {
+					return fmt.Errorf("%w: %v", domain.ErrInvalidRecipient, recipient)
+				} else {
+					recipients = append(recipients, address.Address)
+				}
 			}
 		}
+		e.Recipients = recipients
 	}
 
 	return nil
 }
 
 // Run request
-func (e *EmailTaskConfig) Run(r *http.Request, params map[string]interface{}) domain.Response {
-	//TODO implement me
-	panic("implement me")
+func (e *EmailTaskConfig) Run(r *http.Request, params map[string]interface{}) response.Response {
+	var (
+		data map[string]interface{}
+		err  error
+		m    *gomail.Message
+	)
+	// get all necessary data
+	if data, err = e.GetData(r, params); err != nil {
+		return response.Error(err)
+	}
+
+	// get message
+	if m, err = e.GetMessage(data); err != nil {
+		return response.Error(err)
+	}
+
+	// check for debug
+	if e.Debug {
+		var result bytes.Buffer
+
+		messageBuffer := bytes.Buffer{}
+		if _, err := m.WriteTo(&messageBuffer); err != nil {
+			return response.Error(err)
+		}
+
+		// prepare response
+		if err := debugTemplate.Execute(&result, map[string]interface{}{
+			"data":    data,
+			"message": messageBuffer.String(),
+		}); err != nil {
+			return response.Error(err)
+		}
+
+		return response.HTML(result.String())
+	}
+
+	// send actual email
+	if err = e.Send(m); err != nil {
+		return response.Error(err)
+	}
+
+	return nil
 }
 
 // Connect to smtp server
@@ -160,6 +229,7 @@ func (e *EmailTaskConfig) Connect() error {
 	}
 }
 
+// Send multiple messages
 func (e *EmailTaskConfig) Send(m ...*gomail.Message) error {
 	return gomail.NewDialer(e.Smtp.Host, e.Smtp.Port, e.Smtp.Username, e.Smtp.Password).DialAndSend(m...)
 }
@@ -177,4 +247,31 @@ func (e *EmailTaskConfig) GetData(r *http.Request, params map[string]interface{}
 	}
 
 	return data, nil
+}
+
+// GetMessage returns smtp message for given data
+func (e *EmailTaskConfig) GetMessage(data map[string]interface{}) (m *gomail.Message, err error) {
+	var (
+		subject bytes.Buffer
+		body    bytes.Buffer
+	)
+
+	// first subject
+	if err = e.subjectTemplate.Execute(&subject, data); err != nil {
+		return
+	}
+
+	// now body
+	if err = e.bodyTemplate.Execute(&body, data); err != nil {
+		return
+	}
+
+	// now create message
+	m = gomail.NewMessage()
+	m.SetHeader("From", e.Sender)
+	m.SetHeader("To", e.Recipients...)
+	m.SetHeader("Subject", subject.String())
+	m.SetBody(e.contentType, body.String())
+
+	return
 }

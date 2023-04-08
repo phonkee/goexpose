@@ -45,6 +45,10 @@ github.com/nmcclain/asn1-ber v0.0.0-20140416010459-ec51d5ed2137 h1:qf83gL84qBpNh
 github.com/nmcclain/asn1-ber v0.0.0-20140416010459-ec51d5ed2137/go.mod h1:O1EljZ+oHprtxDDPHiMWVo/5dBT6PlvWX5PSwj80aBA=
 github.com/nmcclain/ldap v0.0.0-20160601145537-6e14e8271933 h1:0Fd8aTYHbLx4Wx2aT048Z8KT93VgzY9XmCV6DjHFDPw=
 github.com/nmcclain/ldap v0.0.0-20160601145537-6e14e8271933/go.mod h1:YtrVB1/v9Td9SyjXpjYVmbdKgj9B0nPTBsdGUxy0i8U=
+github.com/phonkee/go-response v0.3.4 h1:itdf+azZ1at61S24IPs+F9l1ILjnc16iXjMMDdeRrxY=
+github.com/phonkee/go-response v0.3.4/go.mod h1:vmv41xRFDYkm/fO9qf0M/47ttBPXjAmQI+24wDngKYg=
+github.com/pkg/errors v0.9.1 h1:FEBLx1zS214owpjy7qsBeixbURkuhQAwrK5UwLGTwt4=
+github.com/pkg/errors v0.9.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/smartystreets/assertions v1.2.0 h1:42S6lae5dvLc7BrLu/0ugRtcFVjoJNMC/N3yZFZkDFs=

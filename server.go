@@ -50,9 +50,7 @@ type Server struct {
 	Router *mux.Router
 }
 
-/*
-Runs http server
-*/
+// Run runs http server
 func (s *Server) Run() (err error) {
 
 	glog.V(2).Infof(logo, s.Version)
@@ -88,8 +86,8 @@ func (s *Server) router(ignored ...string) (router *mux.Router, err error) {
 	router = mux.NewRouter()
 	router.NotFoundHandler = http.HandlerFunc(s.NotFoundHandler)
 
-	var routes []*route
-	if routes, err = s.routes(ignored...); err != nil {
+	var routes []*domain.Route
+	if routes, err = s.GetRoutes(ignored); err != nil {
 		return
 	}
 
@@ -114,21 +112,19 @@ type route struct {
 	Path           string
 	TaskConfig     *domain.TaskConfig
 	EndpointConfig *domain.EndpointConfig
-	Task           domain.Tasker
+	Task           domain.Task
 }
 
-/*
-Returns prepared routes
-*/
-func (s *Server) routes(ignored ...string) (routes []*route, err error) {
+// GetRoutes Returns prepared routes
+func (s *Server) GetRoutes(ignored []string) (routes []*domain.Route, err error) {
 	var (
 		authorizers domain.Authorizers
 		factory     domain.TaskFactory
 		ok          bool
-		tasks       []domain.Tasker
+		tasks       []domain.Task
 	)
 
-	routes = []*route{}
+	routes = []*domain.Route{}
 	// Get all authorizers
 	if authorizers, err = GetAuthorizers(s.Config); err != nil {
 		return
@@ -168,7 +164,7 @@ Outer:
 			for _, task := range tasks {
 				path := econfig.Path + task.Path()
 
-				r := &route{
+				r := &domain.Route{
 					Authorizers:    authorizers,
 					EndpointConfig: econfig,
 					Path:           path,
@@ -189,7 +185,7 @@ Outer:
 /*
 Handle func
 */
-func (s *Server) Handle(task domain.Tasker, authorizers domain.Authorizers, ec *domain.EndpointConfig, tc *domain.TaskConfig) http.HandlerFunc {
+func (s *Server) Handle(task domain.Task, authorizers domain.Authorizers, ec *domain.EndpointConfig, tc *domain.TaskConfig) http.HandlerFunc {
 
 	env := s.GetEnv()
 
@@ -260,17 +256,11 @@ func (s *Server) Handle(task domain.Tasker, authorizers domain.Authorizers, ec *
 	}
 }
 
-/*
-Handler for not found
-*/
 func (s *Server) NotFoundHandler(w http.ResponseWriter, r *http.Request) {
 	t := time.Now()
 	NewResponse(http.StatusNotFound).Write(w, r, t)
 }
 
-/*
-Returns
-*/
 func (s *Server) GetQueryParams(r *http.Request, ec *domain.EndpointConfig) (result map[string]string) {
 	result = map[string]string{}
 	if ec.QueryParams != nil {
@@ -285,9 +275,6 @@ func (s *Server) GetQueryParams(r *http.Request, ec *domain.EndpointConfig) (res
 	return
 }
 
-/*
-Get environment variables
-*/
 func (s *Server) GetEnv() map[string]interface{} {
 	result := map[string]interface{}{}
 	for _, v := range os.Environ() {

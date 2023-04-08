@@ -27,6 +27,8 @@ require (
 	github.com/mattn/go-sqlite3 v1.14.16 // indirect
 	github.com/mcuadros/go-defaults v1.2.0 // indirect
 	github.com/nmcclain/asn1-ber v0.0.0-20140416010459-ec51d5ed2137 // indirect
+	github.com/phonkee/go-response v0.3.4 // indirect
+	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/smartystreets/assertions v1.2.0 // indirect
 	github.com/stretchr/testify v1.8.2 // indirect
