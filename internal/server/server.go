@@ -67,14 +67,14 @@ func (s *Server) Run(ctx context.Context) (err error) {
 	// construct listen from host and port
 	listen := fmt.Sprintf("%s:%d", s.Config.Host, s.Config.Port)
 
+	zap.L().Info("listening", zap.String("address", listen))
+
 	// ssl version
 	if s.Config.SSL != nil {
-		zap.L().Info("Start listen", zap.String("address", listen))
 		if err = http.ListenAndServeTLS(listen, s.Config.SSL.Cert, s.Config.SSL.Key, s.Router); err != nil {
 			return
 		}
 	} else {
-		zap.L().Info("Start listen", zap.String("address", listen))
 		if err = http.ListenAndServe(listen, s.Router); err != nil {
 			return
 		}
@@ -102,6 +102,11 @@ func (s *Server) router(ignored ...string) (router *mux.Router, err error) {
 
 	for _, route := range routes {
 		// Log registered route
+		zap.L().Info("register route",
+			zap.String("path", route.Path),
+			zap.String("method", route.Method),
+			zap.String("task", route.TaskConfig.Type),
+		)
 
 		// register route to router
 		router.HandleFunc(route.Path, s.Handle(route.Task, route.Authorizers, route.EndpointConfig, route.TaskConfig)).Methods(route.Method).Name(route.EndpointConfig.RouteName())
