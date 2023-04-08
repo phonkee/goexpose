@@ -3,7 +3,7 @@ package tasks
 import (
 	"github.com/phonkee/go-response"
 	"github.com/phonkee/goexpose/domain"
-	"github.com/phonkee/goexpose/tasks/registry"
+	"github.com/phonkee/goexpose/internal/tasks/registry"
 	"net/http"
 )
 

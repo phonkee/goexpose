@@ -8,7 +8,7 @@ import (
 	_ "github.com/mcuadros/go-defaults"
 	"github.com/phonkee/go-response"
 	"github.com/phonkee/goexpose/domain"
-	"github.com/phonkee/goexpose/tasks/registry"
+	"github.com/phonkee/goexpose/internal/tasks/registry"
 	"gopkg.in/gomail.v2"
 	_ "gopkg.in/gomail.v2"
 	"math/rand"

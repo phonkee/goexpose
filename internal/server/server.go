@@ -1,13 +1,15 @@
-package goexpose
+package server
 
 import (
 	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/phonkee/go-response"
-	"github.com/phonkee/goexpose/config"
+	"github.com/phonkee/goexpose"
+	"github.com/phonkee/goexpose/auth"
 	"github.com/phonkee/goexpose/domain"
-	"github.com/phonkee/goexpose/tasks/registry"
+	"github.com/phonkee/goexpose/internal/config"
+	"github.com/phonkee/goexpose/internal/tasks/registry"
 	"io"
 	"net/http"
 
@@ -30,11 +32,11 @@ var (
                                                             version: %v`
 )
 
-// NewServer returns new server instance
-func NewServer(config *config.Config) (server *Server, err error) {
+// New returns new server instance
+func New(config *config.Config) (server *Server, err error) {
 	server = &Server{
 		Config:  config,
-		Version: VERSION,
+		Version: goexpose.VERSION,
 	}
 
 	return
@@ -133,7 +135,7 @@ func (s *Server) GetRoutes(ignored []string) (routes []*domain.Route, err error)
 
 	routes = []*domain.Route{}
 	// Get all authorizers
-	if authorizers, err = GetAuthorizers(s.Config); err != nil {
+	if authorizers, err = auth.GetAuthorizers(s.Config); err != nil {
 		return
 	}
 

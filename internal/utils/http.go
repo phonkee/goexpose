@@ -1,7 +1,7 @@
 /*
 Various http helpers and utilities
 */
-package goexpose
+package utils
 
 import (
 	"io"

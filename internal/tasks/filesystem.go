@@ -6,7 +6,7 @@ import (
 	"github.com/phonkee/go-response"
 	"github.com/phonkee/goexpose"
 	"github.com/phonkee/goexpose/domain"
-	"github.com/phonkee/goexpose/tasks/registry"
+	"github.com/phonkee/goexpose/internal/tasks/registry"
 	"io/ioutil"
 	"net/http"
 	"os"

@@ -1,11 +1,13 @@
-package goexpose
+package auth
 
 import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"github.com/phonkee/goexpose/config"
+	"github.com/phonkee/goexpose"
 	"github.com/phonkee/goexpose/domain"
+	"github.com/phonkee/goexpose/internal/config"
+	"github.com/phonkee/goexpose/internal/utils"
 	"net/http"
 	"strings"
 	"sync"
@@ -365,7 +367,7 @@ func (h *HttpAuthorizer) Authorize(r *http.Request) (err error) {
 	)
 
 	// use Requester
-	if _, response, err = NewRequester().DoNew(method, url, strings.NewReader(body)); err != nil {
+	if _, response, err = utils.NewRequester().DoNew(method, url, strings.NewReader(body)); err != nil {
 		return err
 	}
 
@@ -423,13 +425,13 @@ type HttpAuthorizerConfig struct {
 }
 
 func (h *HttpAuthorizerConfig) RenderURL(data map[string]interface{}) (result string, err error) {
-	return RenderTextTemplate(h.URL, data)
+	return goexpose.RenderTextTemplate(h.URL, data)
 }
 
 func (h *HttpAuthorizerConfig) RenderData(data map[string]interface{}) (result string, err error) {
-	return RenderTextTemplate(h.Data, data)
+	return goexpose.RenderTextTemplate(h.Data, data)
 }
 
 func (h *HttpAuthorizerConfig) RenderMethod(data map[string]interface{}) (result string, err error) {
-	return RenderTextTemplate(h.Method, data)
+	return goexpose.RenderTextTemplate(h.Method, data)
 }

@@ -10,45 +10,45 @@ package main
 import (
 	"context"
 	"flag"
-	"github.com/phonkee/goexpose/config"
+	"github.com/phonkee/goexpose/internal/config"
+	"github.com/phonkee/goexpose/internal/server"
 	"os"
 
 	"github.com/golang/glog"
-	"github.com/phonkee/goexpose"
 )
 
 func main() {
-	configVar := flag.String("config", "config.json", "Configuration file location")
+	configVar := flag.String("cfg", "cfg.json", "Configuration file location")
 	formatVar := flag.String("format", "json", "Configuration file format. (json, yaml)")
 
 	// Parse command line flags
 	flag.Parse()
 
 	var (
-		config *config.Config
-		server *goexpose.Server
-		err    error
+		cfg *config.Config
+		srv *server.Server
+		err error
 	)
 
-	// read config file
-	if config, err = config.NewConfigFromFilename(*configVar, *formatVar); err != nil {
-		glog.Errorf("config error: %v", err)
+	// read cfg file
+	if cfg, err = config.NewConfigFromFilename(*configVar, *formatVar); err != nil {
+		glog.Errorf("cfg error: %v", err)
 		os.Exit(1)
 	}
 
-	// change working directory to config directory
-	if err = os.Chdir(config.Directory); err != nil {
-		glog.Errorf("config error: %v", err)
+	// change working directory to cfg directory
+	if err = os.Chdir(cfg.Directory); err != nil {
+		glog.Errorf("cfg error: %v", err)
 		os.Exit(1)
 	}
 
-	if server, err = goexpose.NewServer(config); err != nil {
-		glog.Errorf("server error: %v", err)
+	if srv, err = server.New(cfg); err != nil {
+		glog.Errorf("srv error: %v", err)
 		os.Exit(1)
 	}
 
-	if err = server.Run(context.Background()); err != nil {
-		glog.Errorf("server run error: %v", err)
+	if err = srv.Run(context.Background()); err != nil {
+		glog.Errorf("srv run error: %v", err)
 		os.Exit(1)
 	}
 }

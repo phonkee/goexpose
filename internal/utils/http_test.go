@@ -1,4 +1,4 @@
-package goexpose
+package utils
 
 import (
 	"testing"
