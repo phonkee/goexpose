@@ -21,16 +21,16 @@ func NewConfig() *Config {
 
 // Config is main configuration for goexpose
 type Config struct {
-	Host        string                       `json:"host" default:"0.0.0.0"`
-	Port        int                          `json:"port" default:"9980"`
-	SSL         *SSLConfig                   `json:"ssl"`
-	PrettyJson  bool                         `json:"pretty_json"`
-	Authorizers map[string]*AuthorizerConfig `json:"authorizers"`
-	Endpoints   []*domain.EndpointConfig     `json:"endpoints"`
-	ReloadEnv   bool                         `json:"reload_env"`
-	Directory   string                       `json:"-"`
-	Raw         json.RawMessage              `json:"-"`
-	Logging     Logging                      `json:"logging"`
+	Host        string                              `json:"host" default:"0.0.0.0"`
+	Port        int                                 `json:"port" default:"9980"`
+	SSL         *SSLConfig                          `json:"ssl"`
+	PrettyJson  bool                                `json:"pretty_json"`
+	Authorizers map[string]*domain.AuthorizerConfig `json:"authorizers"`
+	Endpoints   []*domain.EndpointConfig            `json:"endpoints"`
+	ReloadEnv   bool                                `json:"reload_env"`
+	Directory   string                              `json:"-"`
+	Raw         json.RawMessage                     `json:"-"`
+	Logging     Logging                             `json:"logging"`
 }
 
 func (c *Config) Validate() error {
@@ -49,21 +49,6 @@ func (c *Config) Validate() error {
 type SSLConfig struct {
 	Cert string `json:"cert"`
 	Key  string `json:"key"`
-}
-
-// AuthorizerConfig configures authorizer
-type AuthorizerConfig struct {
-	Type   string          `json:"type"`
-	Config json.RawMessage `json:"config"`
-}
-
-func (a *AuthorizerConfig) Validate() (err error) {
-	// TODO: move into auth package
-	//if ok := goexpose.AuthorizerExists(a.Type); !ok {
-	//	err = fmt.Errorf("authorizer %s does not exist", a.Type)
-	//}
-
-	return
 }
 
 type QueryParams struct {

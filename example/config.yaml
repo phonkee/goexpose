@@ -8,18 +8,17 @@ endpoints:
     methods:
       GET:
         type: "info"
-
-#  - path: "/test"
-#    methods:
-#      GET:
-#        type: "shell"
-#        config:
-#          single_result: 0
-#          commands:
-#            -
-#              chdir: "/tmp"
-#              command: "cat out.out"
-#              format: "json"
+  - path: "/test"
+    methods:
+      GET:
+        type: "shell"
+        config:
+          single_result: 0
+          commands:
+            -
+              chdir: "/tmp"
+              command: "cat out.out"
+              format: "json"
 #  - path: "/multi"
 #    methods:
 #      GET:

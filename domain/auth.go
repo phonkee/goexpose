@@ -1,12 +1,30 @@
 package domain
 
-import "net/http"
+import (
+	"encoding/json"
+	"net/http"
+)
 
 /*
 Authorizer implements authorization
 */
 type Authorizer interface {
 	Authorize(r *http.Request) error
+}
+
+// AuthorizerConfig configures authorizer
+type AuthorizerConfig struct {
+	Type   string          `json:"type"`
+	Config json.RawMessage `json:"config"`
+}
+
+func (a *AuthorizerConfig) Validate() (err error) {
+	// TODO: tear this dependency
+	//if ok := auth.Exists(a.Type); !ok {
+	//	err = fmt.Errorf("authorizer %s does not exist", a.Type)
+	//}
+
+	return
 }
 
 type Authorizers map[string]Authorizer

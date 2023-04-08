@@ -14,7 +14,7 @@ type Authorizer interface {
 }
 
 // AuthorizerInitFunc returns new authorizer
-type AuthorizerInitFunc func(config *config.AuthorizerConfig) (Authorizer, error)
+type AuthorizerInitFunc func(config *domain.AuthorizerConfig) (Authorizer, error)
 
 var (
 	authorizers     = map[string]AuthorizerInitFunc{}
@@ -30,8 +30,8 @@ func RegisterAuthorizer(id string, factory AuthorizerInitFunc) {
 	authorizers[id] = factory
 }
 
-// AuthorizerExists returns if exists authorizer by given id
-func AuthorizerExists(id string) (ok bool) {
+// Exists returns if exists authorizer by given id
+func Exists(id string) (ok bool) {
 	authorizersLock.RLock()
 	defer authorizersLock.RUnlock()
 	_, ok = authorizers[id]

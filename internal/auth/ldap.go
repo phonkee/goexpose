@@ -6,7 +6,6 @@ import (
 	"github.com/mcuadros/go-defaults"
 	"github.com/nmcclain/ldap"
 	"github.com/phonkee/goexpose/domain"
-	"github.com/phonkee/goexpose/internal/config"
 	"net/http"
 )
 
@@ -51,7 +50,7 @@ func (l *LDAPAuthorizerConfig) Validate() (err error) {
 	return
 }
 
-func LDAPAuthorizerInitFunc(ac *config.AuthorizerConfig) (result Authorizer, err error) {
+func LDAPAuthorizerInitFunc(ac *domain.AuthorizerConfig) (result Authorizer, err error) {
 	cfg := &LDAPAuthorizerConfig{}
 	defaults.SetDefaults(cfg)
 

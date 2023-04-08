@@ -20,6 +20,14 @@ func InfoTaskFactory(server domain.Server, taskconfig *domain.TaskConfig, ec *do
 		return
 	}
 
+	routes = append(routes, &domain.Route{
+		Path:           ec.Path,
+		TaskConfig:     taskconfig,
+		EndpointConfig: ec,
+		Task:           nil,
+		Method:         http.MethodGet, // TODO: not correct
+	})
+
 	tasks = []domain.Task{&InfoTask{
 		version: server.GetVersion(),
 		routes:  routes,

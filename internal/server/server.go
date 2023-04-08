@@ -69,6 +69,8 @@ func (s *Server) Run(ctx context.Context) (err error) {
 
 	zap.L().Info("listening", zap.String("address", listen))
 
+	defer zap.L().Info("bye…")
+
 	// ssl version
 	if s.Config.SSL != nil {
 		if err = http.ListenAndServeTLS(listen, s.Config.SSL.Cert, s.Config.SSL.Key, s.Router); err != nil {

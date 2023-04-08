@@ -3,7 +3,6 @@ package auth
 import (
 	"encoding/json"
 	"github.com/phonkee/goexpose/domain"
-	"github.com/phonkee/goexpose/internal/config"
 	"github.com/phonkee/goexpose/internal/utils"
 	"net/http"
 	"net/url"
@@ -20,7 +19,7 @@ http authorizer
 http authorizer basically makes http request to check username and password against web service.
 */
 
-func HttpAuthorizerInitFunc(ac *config.AuthorizerConfig) (result Authorizer, err error) {
+func HttpAuthorizerInitFunc(ac *domain.AuthorizerConfig) (result Authorizer, err error) {
 
 	var (
 		cfg *HttpAuthorizerConfig
@@ -87,7 +86,7 @@ NewHttpAuthorizerConfig
 Returns fresh copy of AuthorizerConfi
 */
 
-func NewHttpAuthorizerConfig(ac *config.AuthorizerConfig) (hac *HttpAuthorizerConfig, err error) {
+func NewHttpAuthorizerConfig(ac *domain.AuthorizerConfig) (hac *HttpAuthorizerConfig, err error) {
 	hac = &HttpAuthorizerConfig{
 		Method: http.MethodGet,
 	}

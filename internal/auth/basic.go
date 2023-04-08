@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/phonkee/goexpose/domain"
-	"github.com/phonkee/goexpose/internal/config"
 	"net/http"
 	"strings"
 )
@@ -24,7 +23,7 @@ type BasicAuthorizerConfig struct {
 	Password string `json:"password"`
 }
 
-func BasicAuthorizerInitFunc(ac *config.AuthorizerConfig) (result Authorizer, err error) {
+func BasicAuthorizerInitFunc(ac *domain.AuthorizerConfig) (result Authorizer, err error) {
 	cfg := &BasicAuthorizerConfig{}
 	if err = json.Unmarshal(ac.Config, cfg); err != nil {
 		return
