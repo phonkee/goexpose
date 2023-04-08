@@ -1,9 +1,9 @@
 package goexpose
 
 import (
+	"context"
 	_ "embed"
 	"fmt"
-	"github.com/davecgh/go-spew/spew"
 	"github.com/phonkee/goexpose/internal/config"
 	"github.com/phonkee/goexpose/internal/server"
 	"github.com/urfave/cli/v2"
@@ -49,9 +49,7 @@ func NewApp() *cli.App {
 					return err
 				}
 
-				spew.Dump(srv)
-
-				return nil
+				return srv.Run(context.Background())
 			},
 		},
 		{

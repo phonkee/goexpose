@@ -19,6 +19,7 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/gorilla/mux"
+	_ "github.com/phonkee/goexpose/internal/tasks"
 )
 
 var (

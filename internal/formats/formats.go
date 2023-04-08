@@ -1,4 +1,4 @@
-package goexpose
+package formats
 
 import (
 	"encoding/json"

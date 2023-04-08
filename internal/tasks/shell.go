@@ -5,8 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"github.com/phonkee/go-response"
-	"github.com/phonkee/goexpose"
 	"github.com/phonkee/goexpose/domain"
+	"github.com/phonkee/goexpose/internal/formats"
 	"github.com/phonkee/goexpose/internal/tasks/registry"
 	"github.com/phonkee/goexpose/internal/utils"
 	"net/http"
@@ -57,7 +57,7 @@ type ShellTaskConfigCommand struct {
 }
 
 func (s *ShellTaskConfigCommand) Validate() (err error) {
-	if s.Format, err = goexpose.VerifyFormat(s.Format); err != nil {
+	if s.Format, err = formats.VerifyFormat(s.Format); err != nil {
 		return
 	}
 	return
@@ -143,7 +143,7 @@ func (s *ShellTask) Run(r *http.Request, data map[string]interface{}) response.R
 			goto Append
 		} else {
 			// format out
-			if re, f, e := goexpose.Format(string(strings.TrimSpace(string(out))), command.Format); e == nil {
+			if re, f, e := formats.Format(string(strings.TrimSpace(string(out))), command.Format); e == nil {
 				cmdresp = cmdresp.Result(re).Data("format", f)
 			} else {
 				cmdresp = cmdresp.Error(e)

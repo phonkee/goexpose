@@ -5,8 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"github.com/phonkee/go-response"
-	"github.com/phonkee/goexpose"
 	"github.com/phonkee/goexpose/domain"
+	"github.com/phonkee/goexpose/internal/formats"
 	"github.com/phonkee/goexpose/internal/tasks/registry"
 	"github.com/phonkee/goexpose/internal/utils"
 	"io"
@@ -60,7 +60,7 @@ func (h *HttpTaskConfig) Validate() (err error) {
 			return domain.ErrInvalidURL
 		}
 
-		if url.Format, err = goexpose.VerifyFormat(url.Format); err != nil {
+		if url.Format, err = formats.VerifyFormat(url.Format); err != nil {
 			return err
 		}
 	}
@@ -178,16 +178,16 @@ func (h *HttpTask) Run(r *http.Request, data map[string]interface{}) response.Re
 		format = url.Format
 
 		// try to guess json
-		if !goexpose.HasFormat(format, "json") {
+		if !formats.HasFormat(format, "json") {
 			ct := strings.ToLower(r.Header.Get("Content-Type"))
 			if strings.Contains(ct, "application/json") {
-				if !goexpose.HasFormat(format, "json") {
-					format = goexpose.AddFormat(format, "json")
+				if !formats.HasFormat(format, "json") {
+					format = formats.AddFormat(format, "json")
 				}
 			}
 		}
 
-		if re, f, e := goexpose.Format(string(respbody), url.Format); e == nil {
+		if re, f, e := formats.Format(string(respbody), url.Format); e == nil {
 			ir = ir.Result(re).Data("format", f)
 		} else {
 			ir = ir.Error(e)

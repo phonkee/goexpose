@@ -1,7 +1,6 @@
 package config
 
 import (
-	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -19,34 +18,12 @@ func NewFromFilename(filename string) (config *Config, err error) {
 		return
 	}
 
-	var format string
 	ext := strings.ToLower(strings.TrimLeft(filepath.Ext(filename), "."))
 
 	// unmarshal config
 	if config, err = unmarshalConfig(string(contents), ext); err != nil {
 		return
 	}
-
-	found := false
-	for name, fmtUnmarshalFunc := range configFormats {
-		if name == format {
-			if err = fmtUnmarshalFunc(contents, config); err != nil {
-				return
-			}
-			found = true
-			break
-		}
-	}
-
-	if !found {
-		err = errors.New("file format not found")
-		return
-	}
-
-	//// unmarshal config
-	//if err = json.Unmarshal(contents, config); err != nil {
-	//	return
-	//}
 
 	// get config dir
 	if config.Directory, err = filepath.Abs(filepath.Dir(filename)); err != nil {
