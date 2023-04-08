@@ -103,9 +103,9 @@ type CassandraTask struct {
 /*
 Run cassandra task
 */
-func (c *CassandraTask) Run(r *http.Request, data map[string]interface{}) (response response.Response) {
+func (c *CassandraTask) Run(r *http.Request, data map[string]interface{}) response.Response {
 
-	queries := []*goexpose.Response{}
+	queries := make([]response.Response, 0)
 
 	for _, query := range c.config.Queries {
 		args := []interface{}{}
@@ -117,7 +117,7 @@ func (c *CassandraTask) Run(r *http.Request, data map[string]interface{}) (respo
 			err     error
 		)
 
-		qr := goexpose.NewResponse(http.StatusOK).StripStatusData()
+		qr := response.OK()
 
 		chosts := []string{}
 		for _, i := range query.Cluster {
@@ -132,23 +132,23 @@ func (c *CassandraTask) Run(r *http.Request, data map[string]interface{}) (respo
 		// instantiate cluster
 		cluster = gocql.NewCluster(chosts...)
 		if cluster.Keyspace, err = goexpose.Interpolate(query.Keyspace, data); err != nil {
-			qr.Error(err)
+			qr = qr.Error(err)
 			goto Append
 		}
 
 		if session, err = cluster.CreateSession(); err != nil {
-			qr.Error(err)
+			qr = qr.Error(err)
 			goto Append
 		}
 
 		if c.config.ReturnQueries {
-			qr.AddValue("query", query.Query)
+			qr = qr.Data("query", query.Query)
 		}
 
 		for _, arg := range query.Args {
 			final, err := goexpose.Interpolate(arg, data)
 			if err != nil {
-				qr.Error(err)
+				qr = qr.Error(err)
 				goto Append
 			} else {
 				args = append(args, final)
@@ -156,7 +156,7 @@ func (c *CassandraTask) Run(r *http.Request, data map[string]interface{}) (respo
 		}
 
 		if c.config.ReturnQueries {
-			qr.AddValue("args", args)
+			qr = qr.Data("args", args)
 		}
 
 		// slicemap to result
@@ -175,7 +175,6 @@ func (c *CassandraTask) Run(r *http.Request, data map[string]interface{}) (respo
 	// single result
 	if c.config.singleResultIndex != -1 {
 		return response.Result(queries[c.config.singleResultIndex])
-	} else {
-		return response.Result(queries)
 	}
+	return response.Result(queries)
 }

@@ -1,12 +1,12 @@
 package goexpose
 
 import (
+	"context"
 	"fmt"
+	"github.com/phonkee/go-response"
 	"github.com/phonkee/goexpose/domain"
 	"io"
 	"net/http"
-
-	"time"
 
 	"runtime/debug"
 
@@ -51,7 +51,7 @@ type Server struct {
 }
 
 // Run runs http server
-func (s *Server) Run() (err error) {
+func (s *Server) Run(ctx context.Context) (err error) {
 
 	glog.V(2).Infof(logo, s.Version)
 
@@ -76,6 +76,10 @@ func (s *Server) Run() (err error) {
 	}
 
 	return
+}
+
+func (s *Server) GetVersion() string {
+	return s.Version
 }
 
 /*
@@ -190,17 +194,16 @@ func (s *Server) Handle(task domain.Task, authorizers domain.Authorizers, ec *do
 	env := s.GetEnv()
 
 	return func(w http.ResponseWriter, r *http.Request) {
-		t := time.Now()
 		defer func() {
 			if e := recover(); e != nil {
 				debug.PrintStack()
-				NewResponse(http.StatusInternalServerError).Pretty(s.Config.PrettyJson).Error(e).Write(w, r, t)
+				response.New(http.StatusInternalServerError).Error(e).Write(w, r)
 			}
 		}()
 
 		// run authorizers on request
 		if err := authorizers.Authorize(r, ec); err != nil {
-			NewResponse(http.StatusUnauthorized).Write(w, r, t)
+			response.New(http.StatusUnauthorized).Write(w, r)
 			return
 		}
 
@@ -234,31 +237,28 @@ func (s *Server) Handle(task domain.Task, authorizers domain.Authorizers, ec *do
 		}
 
 		// prepare response
-		response := task.Run(r, params)
+		resp := task.Run(r, params)
 
 		// should i add params
 		if ec.QueryParams != nil {
 			if ec.QueryParams.ReturnParams {
-				response = response.AddValue("params", params)
+				resp = resp.Data("params", params)
 			}
 		}
 
 		mqp := ec.Methods[r.Method].QueryParams
 		if mqp != nil {
-			if mqp.ReturnParams && !response.HasValue("params") {
-				response = response.AddValue("params", params)
+			if mqp.ReturnParams && !resp.HasData("params") {
+				resp = response.Data("params", params)
 			}
 		}
 
-		if err := response.Write(w, r, t); err != nil {
-			glog.Errorf("Error while writing response: %s", err)
-		}
+		resp.Write(w, r)
 	}
 }
 
 func (s *Server) NotFoundHandler(w http.ResponseWriter, r *http.Request) {
-	t := time.Now()
-	NewResponse(http.StatusNotFound).Write(w, r, t)
+	response.NotFound().Write(w, r)
 }
 
 func (s *Server) GetQueryParams(r *http.Request, ec *domain.EndpointConfig) (result map[string]string) {

@@ -86,17 +86,17 @@ func (f *FilesystemTask) Run(r *http.Request, data map[string]interface{}) respo
 
 		var (
 			items []os.FileInfo
-			qr    *goexpose.Response
+			qr    response.Response
 		)
 		if items, err = ioutil.ReadDir(full); err != nil {
 			return response.Error(err)
 		}
 
 		// prepare results
-		results := make([]*goexpose.Response, len(items))
+		results := make([]response.Response, len(items))
 		for i, item := range items {
-			qr = goexpose.NewResponse(http.StatusOK).StripStatusData()
-			qr.Result(filepath.Join(full, item.Name())).AddValue("is_dir", item.IsDir())
+			qr = response.OK()
+			qr = qr.Result(filepath.Join(full, item.Name())).Data("is_dir", item.IsDir())
 			results[i] = qr
 		}
 

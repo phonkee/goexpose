@@ -2,6 +2,7 @@ package tasks
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/go-sql-driver/mysql"
 	"github.com/jmoiron/sqlx"
@@ -54,7 +55,7 @@ func (m *MySQLTaskConfig) Validate() (err error) {
 	return
 }
 
-// Configuration for single query
+// MySQLTaskConfigQuery for single query
 type MySQLTaskConfigQuery struct {
 	URL   string   `json:"url"`
 	Query string   `json:"query"`
@@ -88,7 +89,7 @@ func MySQLTaskFactory(s domain.Server, tc *domain.TaskConfig, ec *domain.Endpoin
 	return
 }
 
-// MySQLTask task imlpementation
+// MySQLTask task implementation
 type MySQLTask struct {
 	domain.BaseTask
 
@@ -96,9 +97,7 @@ type MySQLTask struct {
 	config *MySQLTaskConfig
 }
 
-/*
-Run mysql task.
-*/
+// Run mysql task.
 func (m *MySQLTask) Run(r *http.Request, data map[string]interface{}) response.Response {
 
 	queries := make([]*goexpose.Response, 0)
@@ -181,7 +180,6 @@ func (m *MySQLTask) Run(r *http.Request, data map[string]interface{}) response.R
 	// single result
 	if m.config.singleResultIndex != -1 {
 		return response.Result(queries[m.config.singleResultIndex])
-	} else {
-		return response.Result(queries)
 	}
+	return response.Result(queries)
 }

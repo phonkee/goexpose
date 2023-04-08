@@ -2,8 +2,10 @@ package tasks
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/garyburd/redigo/redis"
+	"github.com/phonkee/go-response"
 	"github.com/phonkee/goexpose"
 	"github.com/phonkee/goexpose/domain"
 	"net/http"
@@ -26,7 +28,7 @@ type RedisTaskConfig struct {
 	Queries           []RedisTaskConfigQuery `json:"queries"`
 	ReturnQueries     bool                   `json:"return_queries"`
 	SingleResult      *int                   `json:"single_result"`
-	singleResultIndex int                    `json:"-"`
+	singleResultIndex int
 }
 
 func (r *RedisTaskConfig) Validate() (err error) {
@@ -102,10 +104,8 @@ func (r *RedisTaskConfigQuery) Validate() (err error) {
 	return fmt.Errorf("unknown redis type %s", r.Type)
 }
 
-/*
-Factory to create task instances
-*/
-func RedisTaskFactory(server goexpose.Server, tc *domain.TaskConfig, ec *domain.EndpointConfig) (result []domain.Task, err error) {
+// Factory to create task instances
+func RedisTaskFactory(server domain.Server, tc *domain.TaskConfig, ec *domain.EndpointConfig) (result []domain.Task, err error) {
 	// address defaults to tcp
 	config := &RedisTaskConfig{
 		Address:  ":6379",
@@ -141,35 +141,31 @@ type RedisTask struct {
 /*
 Run method runs when request comes...
 */
-func (rt *RedisTask) Run(r *http.Request, data map[string]interface{}) (response domain.Response) {
-
-	response = goexpose.NewResponse(http.StatusOK)
+func (r *RedisTask) Run(req *http.Request, data map[string]interface{}) response.Response {
 
 	var (
 		address string
 		err     error
 	)
-	if address, err = goexpose.Interpolate(rt.config.Address, data); err != nil {
-		response.Error(err)
-		return
+	if address, err = goexpose.Interpolate(r.config.Address, data); err != nil {
+		return response.Error(err)
 	}
 
 	var conn redis.Conn
-	if conn, err = redis.Dial(rt.config.Network, address); err != nil {
-		response.Error(err)
-		return
+	if conn, err = redis.Dial(r.config.Network, address); err != nil {
+		return response.Error(err)
 	}
 
-	queries := []*goexpose.Response{}
+	queries := make([]*goexpose.Response, 0)
 
 	var (
 		reply interface{}
 		grr   interface{}
 	)
-	for _, query := range rt.config.Queries {
+	for _, query := range r.config.Queries {
 		qr := goexpose.NewResponse(http.StatusOK).StripStatusData()
 
-		args := []interface{}{}
+		args := make([]interface{}, 0)
 		for _, arg := range query.Args {
 			var ia string
 			if ia, err = goexpose.Interpolate(arg, data); err != nil {
@@ -180,7 +176,7 @@ func (rt *RedisTask) Run(r *http.Request, data map[string]interface{}) (response
 		}
 
 		// return full query?
-		if rt.config.ReturnQueries {
+		if r.config.ReturnQueries {
 			qr.AddValue("command", query.Command)
 			qr.AddValue("args", args)
 		}
@@ -196,7 +192,7 @@ func (rt *RedisTask) Run(r *http.Request, data map[string]interface{}) (response
 			goto AddItem
 		}
 
-		if grr, err = rt.GetReply(reply, query); err != nil {
+		if grr, err = r.GetReply(reply, query); err != nil {
 			qr.Error(err)
 			goto AddItem
 		}
@@ -208,13 +204,10 @@ func (rt *RedisTask) Run(r *http.Request, data map[string]interface{}) (response
 	}
 
 	// single result
-	if rt.config.singleResultIndex != -1 {
-		response.Result(queries[rt.config.singleResultIndex])
-	} else {
-		response.Result(queries)
+	if r.config.singleResultIndex != -1 {
+		response.Result(queries[r.config.singleResultIndex])
 	}
-
-	return
+	return response.Result(queries)
 }
 
 func (r *RedisTask) GetReply(reply interface{}, query RedisTaskConfigQuery) (interface{}, error) {
@@ -223,5 +216,4 @@ func (r *RedisTask) GetReply(reply interface{}, query RedisTaskConfigQuery) (int
 	} else {
 		return fn(reply, nil)
 	}
-
 }

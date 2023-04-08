@@ -2,7 +2,9 @@ package tasks
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"github.com/phonkee/go-response"
 	"github.com/phonkee/goexpose"
 	"github.com/phonkee/goexpose/domain"
 	"net/http"
@@ -12,8 +14,8 @@ func init() {
 	goexpose.RegisterTaskFactory("multi", MultiTaskFactory)
 }
 
-// Factory to create task
-func MultiTaskFactory(s goexpose.Server, tc *domain.TaskConfig, ec *domain.EndpointConfig) (result []domain.Task, err error) {
+// MultiTaskFactory Factory to create task
+func MultiTaskFactory(s domain.Server, tc *domain.TaskConfig, ec *domain.EndpointConfig) (result []domain.Task, err error) {
 	config := &MultiTaskConfig{
 		Tasks: []*domain.TaskConfig{},
 	}
@@ -71,7 +73,7 @@ func MultiTaskFactory(s goexpose.Server, tc *domain.TaskConfig, ec *domain.Endpo
 type MultiTaskConfig struct {
 	Tasks             []*domain.TaskConfig `json:"tasks"`
 	SingleResult      *int                 `json:"single_result"`
-	singleResultIndex int                  `json:"-"`
+	singleResultIndex int
 }
 
 func (m *MultiTaskConfig) Validate() (err error) {
@@ -90,9 +92,7 @@ func (m *MultiTaskConfig) Validate() (err error) {
 	return
 }
 
-/*
-Multi task imlpementation
-*/
+// MultiTask imlpementation
 type MultiTask struct {
 	domain.BaseTask
 
@@ -101,14 +101,9 @@ type MultiTask struct {
 	tasks  []domain.Task
 }
 
-/*
-Run multi task.
-*/
-func (m *MultiTask) Run(r *http.Request, data map[string]interface{}) (response *goexpose.Response) {
-
-	response = goexpose.NewResponse(http.StatusOK)
-
-	results := []*goexpose.Response{}
+// Run multi task.
+func (m *MultiTask) Run(r *http.Request, data map[string]interface{}) response.Response {
+	results := make([]response.Response, 0)
 
 	for _, tasker := range m.tasks {
 		tr := tasker.Run(r, data)
@@ -116,10 +111,7 @@ func (m *MultiTask) Run(r *http.Request, data map[string]interface{}) (response 
 	}
 
 	if m.config.singleResultIndex != -1 {
-		response.Result(results[m.config.singleResultIndex])
-	} else {
-		response.Result(results)
+		return response.Result(results[m.config.singleResultIndex])
 	}
-
-	return
+	return response.Result(results)
 }

@@ -113,13 +113,13 @@ Run method is called on request
 */
 func (h *HttpTask) Run(r *http.Request, data map[string]interface{}) response.Response {
 
-	results := make([]*goexpose.Response, 0)
+	results := make([]response.Response, 0)
 
 	var err error
 
 	for _, url := range h.config.URLs {
 
-		ir := goexpose.NewResponse(http.StatusOK).StripStatusData()
+		ir := response.OK()
 
 		client := &http.Client{}
 		var (
@@ -143,22 +143,22 @@ func (h *HttpTask) Run(r *http.Request, data map[string]interface{}) response.Re
 
 		var b string
 		if b, err = goexpose.Interpolate(url.URL, data); err != nil {
-			ir.Error(err)
+			ir = ir.Error(err)
 			goto Append
 		}
 
 		if req, err = http.NewRequest(method, b, body); err != nil {
-			ir.Error(err)
+			ir = ir.Error(err)
 			goto Append
 		}
 
 		if resp, err = client.Do(req); err != nil {
-			ir.Error(err)
+			ir = ir.Error(err)
 			goto Append
 		}
 
 		if respbody, err = ioutil.ReadAll(resp.Body); err != nil {
-			ir.Error(err)
+			ir = ir.Error(err)
 			goto Append
 		}
 
@@ -167,7 +167,7 @@ func (h *HttpTask) Run(r *http.Request, data map[string]interface{}) response.Re
 
 		// return headers?
 		if url.ReturnHeaders {
-			ir.AddValue("headers", resp.Header)
+			ir = ir.Data("headers", resp.Header)
 		}
 
 		// get format(if available)
@@ -184,9 +184,9 @@ func (h *HttpTask) Run(r *http.Request, data map[string]interface{}) response.Re
 		}
 
 		if re, f, e := goexpose.Format(string(respbody), url.Format); e == nil {
-			ir.Result(re).AddValue("format", f)
+			ir = ir.Result(re).Data("format", f)
 		} else {
-			ir.Error(e)
+			ir = ir.Error(e)
 		}
 
 	Append:
@@ -196,7 +196,6 @@ func (h *HttpTask) Run(r *http.Request, data map[string]interface{}) response.Re
 	// return single result
 	if h.config.singleResultIndex != -1 {
 		return response.Result(results[h.config.singleResultIndex])
-	} else {
-		return response.Result(results)
 	}
+	return response.Result(results)
 }

@@ -2,7 +2,9 @@ package tasks
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"github.com/phonkee/go-response"
 	"github.com/phonkee/goexpose"
 	"github.com/phonkee/goexpose/domain"
 	"net/http"
@@ -71,7 +73,7 @@ func NewShellTaskConfig() *ShellTaskConfig {
 /*
 Factory for ShellTask
 */
-func ShellTaskFactory(server goexpose.Server, taskconfig *domain.TaskConfig, ec *domain.EndpointConfig) (tasks []domain.Task, err error) {
+func ShellTaskFactory(server domain.Server, taskconfig *domain.TaskConfig, ec *domain.EndpointConfig) (tasks []domain.Task, err error) {
 	config := NewShellTaskConfig()
 	if err = json.Unmarshal(taskconfig.Config, config); err != nil {
 		return
@@ -91,7 +93,7 @@ func ShellTaskFactory(server goexpose.Server, taskconfig *domain.TaskConfig, ec 
 ShellTask runs shell commands
 */
 type ShellTask struct {
-	Task
+	domain.BaseTask
 
 	// config
 	Config *ShellTaskConfig
@@ -101,11 +103,9 @@ type ShellTask struct {
 Run method for shell task
 Run all commands and return results
 */
-func (s *ShellTask) Run(r *http.Request, data map[string]interface{}) (response *goexpose.Response) {
+func (s *ShellTask) Run(r *http.Request, data map[string]interface{}) response.Response {
 
 	var results []*goexpose.Response
-
-	response = goexpose.NewResponse(http.StatusOK)
 
 	// run all commands
 	for _, command := range s.Config.Commands {
@@ -165,9 +165,6 @@ func (s *ShellTask) Run(r *http.Request, data map[string]interface{}) (response 
 	// single result
 	if s.Config.singleResultIndex != -1 {
 		response.Result(results[s.Config.singleResultIndex])
-	} else {
-		response.Result(results)
 	}
-
-	return
+	return response.Result(results)
 }

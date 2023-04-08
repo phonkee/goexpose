@@ -1,13 +1,14 @@
 package goexpose
 
 import (
+	"github.com/phonkee/goexpose/domain"
 	"testing"
 
 	. "github.com/smartystreets/goconvey/convey"
 )
 
-func ExampleTaskFactory(server *Server, taskconfig *TaskConfig, ec *EndpointConfig) (tasks []Tasker, err error) {
-	tasks = []Tasker{}
+func ExampleTaskFactory(server domain.Server, taskconfig *domain.TaskConfig, ec *domain.EndpointConfig) (tasks []domain.Task, err error) {
+	tasks = []domain.Task{}
 	return
 }
 

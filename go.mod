@@ -12,6 +12,7 @@ require (
 	github.com/jmoiron/sqlx v0.0.0-20161121025428-f71d5ee01769
 	github.com/lib/pq v0.0.0-20161103024354-d8eeeb8bae88
 	github.com/nmcclain/ldap v0.0.0-20160601145537-6e14e8271933
+	github.com/phonkee/go-response v0.4.2
 	github.com/smartystreets/goconvey v1.7.2
 )
 
@@ -27,7 +28,6 @@ require (
 	github.com/mattn/go-sqlite3 v1.14.16 // indirect
 	github.com/mcuadros/go-defaults v1.2.0 // indirect
 	github.com/nmcclain/asn1-ber v0.0.0-20140416010459-ec51d5ed2137 // indirect
-	github.com/phonkee/go-response v0.3.4 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/smartystreets/assertions v1.2.0 // indirect

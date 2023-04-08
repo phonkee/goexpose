@@ -2,8 +2,10 @@ package tasks
 
 import (
 	"encoding/json"
+	"errors"
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
+	"github.com/phonkee/go-response"
 	"github.com/phonkee/goexpose"
 	"github.com/phonkee/goexpose/domain"
 	"net/http"
@@ -19,7 +21,7 @@ PostgresTask
 run queries on postgres database
 */
 
-func PostgresTaskFactory(server goexpose.Server, tc *domain.TaskConfig, ec *domain.EndpointConfig) (tasks []domain.Task, err error) {
+func PostgresTaskFactory(server domain.Server, tc *domain.TaskConfig, ec *domain.EndpointConfig) (tasks []domain.Task, err error) {
 	config := &PostgresTaskConfig{}
 	if err = json.Unmarshal(tc.Config, config); err != nil {
 		return
@@ -38,7 +40,7 @@ type PostgresTaskConfig struct {
 	Queries           []*PostgresTaskConfigQuery `json:"queries"`
 	ReturnQueries     bool                       `json:"return_queries"`
 	SingleResult      *int                       `json:"single_result"`
-	singleResultIndex int                        `json:"-"`
+	singleResultIndex int
 }
 
 func (p *PostgresTaskConfig) Validate() (err error) {
@@ -62,9 +64,7 @@ type PostgresTaskConfigQuery struct {
 	Args  []string `json:"args"`
 }
 
-/*
-Postgres task
-*/
+// Postgres task
 type PostgresTask struct {
 	domain.BaseTask
 
@@ -75,10 +75,9 @@ type PostgresTask struct {
 /*
 Run postgres task
 */
-func (p *PostgresTask) Run(r *http.Request, data map[string]interface{}) (response domain.Response) {
+func (p *PostgresTask) Run(r *http.Request, data map[string]interface{}) response.Response {
 
-	response = goexpose.NewResponse(http.StatusOK)
-	var queryresults []*goexpose.Response
+	var queryResults []*goexpose.Response
 
 	for _, query := range p.config.Queries {
 
@@ -152,15 +151,12 @@ func (p *PostgresTask) Run(r *http.Request, data map[string]interface{}) (respon
 		qresponse.Result(Rows)
 
 	Append:
-		queryresults = append(queryresults, qresponse)
+		queryResults = append(queryResults, qresponse)
 	}
 
 	// single result
 	if p.config.singleResultIndex != -1 {
-		response.Result(queryresults[p.config.singleResultIndex])
-	} else {
-		response.Result(queryresults)
+		response.Result(queryResults[p.config.singleResultIndex])
 	}
-
-	return
+	return response.Result(queryResults)
 }
