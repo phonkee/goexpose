@@ -10,6 +10,7 @@ package main
 import (
 	"context"
 	"flag"
+	"github.com/phonkee/goexpose/config"
 	"os"
 
 	"github.com/golang/glog"
@@ -24,13 +25,13 @@ func main() {
 	flag.Parse()
 
 	var (
-		config *goexpose.Config
+		config *config.Config
 		server *goexpose.Server
 		err    error
 	)
 
 	// read config file
-	if config, err = goexpose.NewConfigFromFilename(*configVar, *formatVar); err != nil {
+	if config, err = config.NewConfigFromFilename(*configVar, *formatVar); err != nil {
 		glog.Errorf("config error: %v", err)
 		os.Exit(1)
 	}

@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"github.com/phonkee/goexpose/config"
 	"github.com/phonkee/goexpose/domain"
 	"net/http"
 	"strings"
@@ -28,7 +29,7 @@ func init() {
 }
 
 // AuthorizerInitFunc returns new authorizer
-type AuthorizerInitFunc func(config *AuthorizerConfig) (Authorizer, error)
+type AuthorizerInitFunc func(config *config.AuthorizerConfig) (Authorizer, error)
 
 var (
 	authorizers     = map[string]AuthorizerInitFunc{}
@@ -54,7 +55,7 @@ func AuthorizerExists(id string) (ok bool) {
 
 // GetAuthorizers Returns authorizers for given config
 // First step is that it validates authorizers
-func GetAuthorizers(config *Config) (result domain.Authorizers, err error) {
+func GetAuthorizers(config *config.Config) (result domain.Authorizers, err error) {
 	result = domain.Authorizers{}
 	authorizerslock.RLock()
 	defer authorizerslock.RUnlock()
@@ -112,7 +113,7 @@ type BasicAuthorizerConfig struct {
 	Password string `json:"password"`
 }
 
-func BasicAuthorizerInitFunc(ac *AuthorizerConfig) (result Authorizer, err error) {
+func BasicAuthorizerInitFunc(ac *config.AuthorizerConfig) (result Authorizer, err error) {
 	config := &BasicAuthorizerConfig{}
 	if err = json.Unmarshal(ac.Config, config); err != nil {
 		return
@@ -221,7 +222,7 @@ func (l *LDAPAuthorizerConfig) Validate() (err error) {
 	return
 }
 
-func LDAPAuthorizerInitFunc(ac *AuthorizerConfig) (result Authorizer, err error) {
+func LDAPAuthorizerInitFunc(ac *config.AuthorizerConfig) (result Authorizer, err error) {
 	config := &LDAPAuthorizerConfig{
 		Host:    LDAP_DEFAULT_HOST,
 		Port:    LDAP_DEFAULT_PORT,
@@ -314,7 +315,7 @@ http authorizer
 http authorizer basically makes http request to check username and password against web service.
 */
 
-func HttpAuthorizerInitFunc(ac *AuthorizerConfig) (result Authorizer, err error) {
+func HttpAuthorizerInitFunc(ac *config.AuthorizerConfig) (result Authorizer, err error) {
 
 	var (
 		config *HttpAuthorizerConfig
@@ -381,7 +382,7 @@ NewHttpAuthorizerConfig
 Returns fresh copy of AuthorizerConfi
 */
 
-func NewHttpAuthorizerConfig(ac *AuthorizerConfig) (hac *HttpAuthorizerConfig, err error) {
+func NewHttpAuthorizerConfig(ac *config.AuthorizerConfig) (hac *HttpAuthorizerConfig, err error) {
 	hac = &HttpAuthorizerConfig{
 		Method: "GET",
 		Data:   "",

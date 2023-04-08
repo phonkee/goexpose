@@ -1,4 +1,4 @@
-package goexpose
+package config
 
 import (
 	"encoding/json"
@@ -121,9 +121,10 @@ type AuthorizerConfig struct {
 }
 
 func (a *AuthorizerConfig) Validate() (err error) {
-	if ok := AuthorizerExists(a.Type); !ok {
-		err = fmt.Errorf("authorizer %s does not exist", a.Type)
-	}
+	// TODO: move into auth package
+	//if ok := goexpose.AuthorizerExists(a.Type); !ok {
+	//	err = fmt.Errorf("authorizer %s does not exist", a.Type)
+	//}
 
 	return
 }

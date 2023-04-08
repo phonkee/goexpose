@@ -2,8 +2,10 @@ package goexpose
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"github.com/phonkee/go-response"
+	"github.com/phonkee/goexpose/config"
 	"github.com/phonkee/goexpose/domain"
 	"github.com/phonkee/goexpose/tasks/registry"
 	"io"
@@ -29,7 +31,7 @@ var (
 )
 
 // NewServer returns new server instance
-func NewServer(config *Config) (server *Server, err error) {
+func NewServer(config *config.Config) (server *Server, err error) {
 	server = &Server{
 		Config:  config,
 		Version: VERSION,
@@ -42,7 +44,7 @@ func NewServer(config *Config) (server *Server, err error) {
 type Server struct {
 
 	// config instance
-	Config *Config
+	Config *config.Config
 
 	// Version
 	Version string
@@ -221,13 +223,23 @@ func (s *Server) Handle(task domain.Task, authorizers domain.Authorizers, ec *do
 		    mux vars are under "url"
 		    cleaned query params are under "query"
 		*/
+		requestData := map[string]interface{}{
+			"method": r.Method,
+			"body":   body,
+		}
+
+		// if we have json content type, try to parse it and add it to request data
+		if r.Header.Get("Content-Type") == "application/json" {
+			jsonData := make(map[string]interface{})
+			if err := json.Unmarshal([]byte(body), &jsonData); err == nil {
+				requestData["json"] = jsonData
+			}
+		}
+
 		params := map[string]interface{}{
-			"url":   mux.Vars(r),
-			"query": s.GetQueryParams(r, ec),
-			"request": map[string]interface{}{
-				"method": r.Method,
-				"body":   body,
-			},
+			"url":     mux.Vars(r),
+			"query":   s.GetQueryParams(r, ec),
+			"request": requestData,
 		}
 
 		// reload environment every request?
