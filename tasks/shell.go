@@ -14,7 +14,7 @@ import (
 )
 
 func init() {
-	registry.RegisterTaskFactory("shell", ShellTaskFactory)
+	registry.RegisterTaskInitFunc("shell", ShellTaskFactory)
 }
 
 // ShellTaskConfig for shell task
@@ -120,7 +120,7 @@ func (s *ShellTask) Run(r *http.Request, data map[string]interface{}) response.R
 			finalCommand string
 			cmd          *exec.Cmd
 		)
-		if b, e = goexpose.Interpolate(command.Command, data); e != nil {
+		if b, e = goexpose.RenderTextTemplate(command.Command, data); e != nil {
 			cmdresp = cmdresp.Error(e)
 			goto Append
 		}

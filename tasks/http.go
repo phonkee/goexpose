@@ -15,7 +15,7 @@ import (
 )
 
 func init() {
-	registry.RegisterTaskFactory("http", HttpTaskFactory)
+	registry.RegisterTaskInitFunc("http", HttpTaskInitFunc)
 }
 
 /*
@@ -32,7 +32,7 @@ type HttpTaskConfig struct {
 	SingleResult *int                 `json:"single_result"`
 
 	// computed property
-	singleResultIndex int `json:"-"`
+	singleResultIndex int
 }
 
 type HttpTaskConfigURL struct {
@@ -54,7 +54,7 @@ func (h *HttpTaskConfig) Validate() (err error) {
 	for _, url := range h.URLs {
 		url.URL = strings.TrimSpace(url.URL)
 		if url.URL == "" {
-			return fmt.Errorf("Invalid url in http task.")
+			return domain.ErrInvalidURL
 		}
 
 		if url.Format, err = goexpose.VerifyFormat(url.Format); err != nil {
@@ -75,9 +75,9 @@ func (h *HttpTaskConfig) Validate() (err error) {
 }
 
 /*
-HttpTaskFactory - factory to create HttpTasks
+HttpTaskInitFunc - factory to create HttpTasks
 */
-func HttpTaskFactory(server domain.Server, tc *domain.TaskConfig, ec *domain.EndpointConfig) (tasks []domain.Task, err error) {
+func HttpTaskInitFunc(_ domain.Server, tc *domain.TaskConfig, ec *domain.EndpointConfig) (tasks []domain.Task, err error) {
 	// default config
 	config := &HttpTaskConfig{}
 
@@ -110,7 +110,7 @@ type HttpTask struct {
 
 /*
 Run method is called on request
-@TODO: please refactor me!
+@TODO: please refactor me! I want to be concurrent!
 */
 func (h *HttpTask) Run(r *http.Request, data map[string]interface{}) response.Response {
 
@@ -143,7 +143,7 @@ func (h *HttpTask) Run(r *http.Request, data map[string]interface{}) response.Re
 		}
 
 		var b string
-		if b, err = goexpose.Interpolate(url.URL, data); err != nil {
+		if b, err = goexpose.RenderTextTemplate(url.URL, data); err != nil {
 			ir = ir.Error(err)
 			goto Append
 		}

@@ -99,8 +99,7 @@ func Format(body string, f string) (result interface{}, format string, err error
 }
 
 /*
-
-*/
+ */
 func HasFormat(format, id string) bool {
 	for _, part := range strings.Split(format, formatsdelimiter) {
 		if part == id {
@@ -110,9 +109,6 @@ func HasFormat(format, id string) bool {
 	return false
 }
 
-/*
-
-*/
 func AddFormat(format, id string) (result string) {
 
 	for _, part := range strings.Split(format, formatsdelimiter) {
@@ -129,9 +125,7 @@ func AddFormat(format, id string) (result string) {
 	return adder + format
 }
 
-/*
-Formats body as json (map[string]interface{})
-*/
+// FormatJSON Formats body as json (map[string]interface{})
 func FormatJSON(body string) (result interface{}, err error) {
 	data := map[string]interface{}{}
 	if err = json.Unmarshal([]byte(body), &data); err != nil {
@@ -142,9 +136,7 @@ func FormatJSON(body string) (result interface{}, err error) {
 	return
 }
 
-/*
-Formats body as json lines
-*/
+// FormatJSONLines Formats body as json lines
 func FormatJSONLines(body string) (result interface{}, err error) {
 
 	r := []map[string]interface{}{}
@@ -163,17 +155,13 @@ func FormatJSONLines(body string) (result interface{}, err error) {
 	return
 }
 
-/*
-Formats body as lines of text (delimited by \n)
-*/
+// FormatLines Formats body as lines of text (delimited by \n)
 func FormatLines(body string) (result interface{}, err error) {
 	result = strings.Split(body, "\n")
 	return
 }
 
-/*
-Text format just returns body
-*/
+// FormatText - Text format just returns body
 func FormatText(body string) (result interface{}, err error) {
 	result = body
 	return

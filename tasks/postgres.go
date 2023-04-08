@@ -13,7 +13,7 @@ import (
 )
 
 func init() {
-	registry.RegisterTaskFactory("postgres", PostgresTaskFactory)
+	registry.RegisterTaskInitFunc("postgres", PostgresTaskFactory)
 }
 
 /*
@@ -94,7 +94,7 @@ func (p *PostgresTask) Run(r *http.Request, data map[string]interface{}) respons
 
 			errq error
 		)
-		if url, err = goexpose.Interpolate(query.URL, data); err != nil {
+		if url, err = goexpose.RenderTextTemplate(query.URL, data); err != nil {
 			qresponse = qresponse.Error(err)
 			goto Append
 		}
@@ -102,7 +102,7 @@ func (p *PostgresTask) Run(r *http.Request, data map[string]interface{}) respons
 		// interpolate all args
 		args = []interface{}{}
 		for _, arg := range query.Args {
-			interpolated, e := goexpose.Interpolate(arg, data)
+			interpolated, e := goexpose.RenderTextTemplate(arg, data)
 			if e != nil {
 				qresponse = qresponse.Error(e)
 				goto Append

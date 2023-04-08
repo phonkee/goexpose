@@ -15,7 +15,7 @@ import (
 )
 
 func init() {
-	registry.RegisterTaskFactory("mysql", MySQLTaskFactory)
+	registry.RegisterTaskInitFunc("mysql", MySQLTaskFactory)
 }
 
 /*
@@ -120,7 +120,7 @@ func (m *MySQLTask) Run(r *http.Request, data map[string]interface{}) response.R
 		qr := response.OK()
 
 		var url string
-		if url, err = goexpose.Interpolate(query.URL, data); err != nil {
+		if url, err = goexpose.RenderTextTemplate(query.URL, data); err != nil {
 			qr = qr.Error(err)
 			goto Append
 		}
@@ -140,7 +140,7 @@ func (m *MySQLTask) Run(r *http.Request, data map[string]interface{}) response.R
 		for _, arg := range query.Args {
 			var a string
 
-			if a, err = goexpose.Interpolate(arg, data); err != nil {
+			if a, err = goexpose.RenderTextTemplate(arg, data); err != nil {
 				qr = qr.Error(err)
 				goto Append
 			}

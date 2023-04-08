@@ -24,7 +24,7 @@ import (
 )
 
 func init() {
-	registry.RegisterTaskFactory("email", EmailTaskFactory)
+	registry.RegisterTaskInitFunc("email", EmailTaskFactory)
 }
 
 var (

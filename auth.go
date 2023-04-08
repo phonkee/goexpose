@@ -440,13 +440,13 @@ type HttpAuthorizerConfig struct {
 }
 
 func (h *HttpAuthorizerConfig) RenderURL(data map[string]interface{}) (result string, err error) {
-	return Interpolate(h.URL, data)
+	return RenderTextTemplate(h.URL, data)
 }
 
 func (h *HttpAuthorizerConfig) RenderData(data map[string]interface{}) (result string, err error) {
-	return Interpolate(h.Data, data)
+	return RenderTextTemplate(h.Data, data)
 }
 
 func (h *HttpAuthorizerConfig) RenderMethod(data map[string]interface{}) (result string, err error) {
-	return Interpolate(h.Method, data)
+	return RenderTextTemplate(h.Method, data)
 }

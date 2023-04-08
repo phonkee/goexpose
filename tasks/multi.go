@@ -11,7 +11,7 @@ import (
 )
 
 func init() {
-	registry.RegisterTaskFactory("multi", MultiTaskFactory)
+	registry.RegisterTaskInitFunc("multi", MultiTaskFactory)
 }
 
 // MultiTaskFactory Factory to create task
@@ -45,12 +45,12 @@ func MultiTaskFactory(s domain.Server, tc *domain.TaskConfig, ec *domain.Endpoin
 		}
 
 		var (
-			factory domain.TaskFactory
+			factory domain.TaskInitFunc
 			ok      bool
 			tasks   []domain.Task
 		)
 
-		if factory, ok = registry.GetTaskFactory(mtc.Type); !ok {
+		if factory, ok = registry.GetTaskInitFunc(mtc.Type); !ok {
 			err = fmt.Errorf("task %s doesn't exist", mtc.Type)
 			return
 		}
@@ -92,7 +92,7 @@ func (m *MultiTaskConfig) Validate() (err error) {
 	return
 }
 
-// MultiTask imlpementation
+// MultiTask implementation
 type MultiTask struct {
 	domain.BaseTask
 

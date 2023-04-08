@@ -15,12 +15,8 @@ import (
 )
 
 func init() {
-	registry.RegisterTaskFactory("filesystem", FilesystemFactory)
+	registry.RegisterTaskInitFunc("filesystem", FilesystemFactory)
 }
-
-/*
-Filesystem task gives possibility to serve files.
-*/
 
 func NewFilesystemConfig() *FilesystemConfig {
 	return &FilesystemConfig{}
@@ -40,19 +36,13 @@ func (f *FilesystemConfig) Validate() (err error) {
 	return
 }
 
-/*
-FilesystemTask
-
-	serve single file
-*/
+// FilesystemTask knows how to serve files from filesystem
 type FilesystemTask struct {
 	domain.BaseTask
 	config *FilesystemConfig
 }
 
-/*
-Run method for FilesystemTask
-*/
+// Run method for FilesystemTask
 func (f *FilesystemTask) Run(r *http.Request, data map[string]interface{}) response.Response {
 
 	var (
@@ -64,12 +54,12 @@ func (f *FilesystemTask) Run(r *http.Request, data map[string]interface{}) respo
 	)
 
 	// interpolate filename
-	if filename, err = goexpose.Interpolate(f.config.File, data); err != nil {
+	if filename, err = goexpose.RenderTextTemplate(f.config.File, data); err != nil {
 		return response.Error(err)
 	}
 
 	// interpolate directory
-	if directory, err = goexpose.Interpolate(f.config.Directory, data); err != nil {
+	if directory, err = goexpose.RenderTextTemplate(f.config.Directory, data); err != nil {
 		return response.Error(err)
 	}
 
@@ -109,7 +99,7 @@ func (f *FilesystemTask) Run(r *http.Request, data map[string]interface{}) respo
 		return response.Error(err)
 	}
 
-	if output, err = goexpose.Interpolate(f.config.Output, data); err != nil {
+	if output, err = goexpose.RenderTextTemplate(f.config.Output, data); err != nil {
 		return response.Error(err).Status(http.StatusInternalServerError)
 	}
 

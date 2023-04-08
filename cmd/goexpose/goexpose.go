@@ -4,11 +4,11 @@ Main package for goexpose binary.
 Goexpose provides several command line arguments such as:
 * config - configuration file
 * format - format of configuration file (json, yaml), default is json
-
 */
 package main
 
 import (
+	"context"
 	"flag"
 	"os"
 
@@ -46,7 +46,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err = server.Run(); err != nil {
+	if err = server.Run(context.Background()); err != nil {
 		glog.Errorf("server run error: %v", err)
 		os.Exit(1)
 	}

@@ -7,7 +7,7 @@ import (
 )
 
 /*
-Returns if method is allowed
+MethodAllowed Returns if method is allowed
 
 if avail methods is blank it also returns true
 */
@@ -24,11 +24,11 @@ func MethodAllowed(method string, avail []string) bool {
 }
 
 /*
-Interpolate
+RenderTextTemplate
 
 renders template with data
 */
-func Interpolate(strTemplate string, data map[string]interface{}) (result string, err error) {
+func RenderTextTemplate(strTemplate string, data map[string]interface{}) (result string, err error) {
 
 	var tpl *template.Template
 

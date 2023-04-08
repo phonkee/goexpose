@@ -11,4 +11,5 @@ var (
 	ErrInvalidSmtp       = errors.New("invalid smtp")
 	ErrInvalidTemplate   = errors.New("invalid template")
 	ErrBodyMissing       = errors.New("please provide either body or body_filename")
+	ErrInvalidURL        = errors.New("invalid url")
 )

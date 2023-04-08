@@ -116,17 +116,12 @@ type SSLConfig struct {
 	Key  string `json:"key"`
 }
 
-/*
-Configuration for authorizer
-*/
+// AuthorizerConfig configures authorizer
 type AuthorizerConfig struct {
 	Type   string          `json:"type"`
 	Config json.RawMessage `json:"config"`
 }
 
-/*
-Validate
-*/
 func (a *AuthorizerConfig) Validate() (err error) {
 	if ok := AuthorizerExists(a.Type); !ok {
 		err = fmt.Errorf("authorizer %s does not exist", a.Type)
@@ -134,10 +129,6 @@ func (a *AuthorizerConfig) Validate() (err error) {
 
 	return
 }
-
-/*
-Query params
-*/
 
 type QueryParams struct {
 	ReturnParams bool                      `json:"return_params"`
@@ -169,9 +160,7 @@ func (q *QueryParams) Validate() (err error) {
 	return
 }
 
-/*
-Returns params from request
-*/
+// GetParams Returns params from request
 func (q *QueryParams) GetParams(r *http.Request) (result map[string]string) {
 	result = map[string]string{}
 
@@ -205,9 +194,7 @@ func (q *QueryParams) GetParams(r *http.Request) (result map[string]string) {
 	return
 }
 
-/*
-Param config
-*/
+// QueryParamsConfigParam config
 type QueryParamsConfigParam struct {
 	Name    string `json:"name"`
 	Regexp  string `json:"regexp"`

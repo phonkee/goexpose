@@ -14,7 +14,7 @@ import (
 )
 
 func init() {
-	registry.RegisterTaskFactory("cassandra", CassandraTaskFactory)
+	registry.RegisterTaskInitFunc("cassandra", CassandraTaskFactory)
 }
 
 /*
@@ -123,7 +123,7 @@ func (c *CassandraTask) Run(r *http.Request, data map[string]interface{}) respon
 		chosts := []string{}
 		for _, i := range query.Cluster {
 			var chost string
-			if chost, err = goexpose.Interpolate(i, data); err != nil {
+			if chost, err = goexpose.RenderTextTemplate(i, data); err != nil {
 				qr.Error(err)
 				goto Append
 			}
@@ -132,7 +132,7 @@ func (c *CassandraTask) Run(r *http.Request, data map[string]interface{}) respon
 
 		// instantiate cluster
 		cluster = gocql.NewCluster(chosts...)
-		if cluster.Keyspace, err = goexpose.Interpolate(query.Keyspace, data); err != nil {
+		if cluster.Keyspace, err = goexpose.RenderTextTemplate(query.Keyspace, data); err != nil {
 			qr = qr.Error(err)
 			goto Append
 		}
@@ -147,7 +147,7 @@ func (c *CassandraTask) Run(r *http.Request, data map[string]interface{}) respon
 		}
 
 		for _, arg := range query.Args {
-			final, err := goexpose.Interpolate(arg, data)
+			final, err := goexpose.RenderTextTemplate(arg, data)
 			if err != nil {
 				qr = qr.Error(err)
 				goto Append

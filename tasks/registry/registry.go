@@ -7,12 +7,12 @@ import (
 )
 
 var (
-	taskRegistry     = map[string]domain.TaskFactory{}
+	taskRegistry     = map[string]domain.TaskInitFunc{}
 	taskRegistryLock = &sync.RWMutex{}
 )
 
-// RegisterTaskFactory registers task factory to server
-func RegisterTaskFactory(id string, factory domain.TaskFactory) {
+// RegisterTaskInitFunc registers task factory to server
+func RegisterTaskInitFunc(id string, factory domain.TaskInitFunc) {
 	taskRegistryLock.Lock()
 	defer taskRegistryLock.Unlock()
 
@@ -25,8 +25,8 @@ func RegisterTaskFactory(id string, factory domain.TaskFactory) {
 	return
 }
 
-// GetTaskFactory returns task factory by id
-func GetTaskFactory(id string) (factory domain.TaskFactory, ok bool) {
+// GetTaskInitFunc returns task factory by id
+func GetTaskInitFunc(id string) (factory domain.TaskInitFunc, ok bool) {
 	taskRegistryLock.RLock()
 	defer taskRegistryLock.RUnlock()
 

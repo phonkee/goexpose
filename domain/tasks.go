@@ -5,8 +5,8 @@ import (
 	"net/http"
 )
 
-// TaskFactory returns instance of task by server and config
-type TaskFactory func(server Server, config *TaskConfig, ec *EndpointConfig) ([]Task, error)
+// TaskInitFunc returns instance of task by server and config
+type TaskInitFunc func(server Server, config *TaskConfig, ec *EndpointConfig) ([]Task, error)
 
 // Task interface
 type Task interface {

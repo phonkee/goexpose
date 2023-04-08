@@ -124,7 +124,7 @@ type route struct {
 func (s *Server) GetRoutes(ignored []string) (routes []*domain.Route, err error) {
 	var (
 		authorizers domain.Authorizers
-		factory     domain.TaskFactory
+		factory     domain.TaskInitFunc
 		ok          bool
 		tasks       []domain.Task
 	)
@@ -156,7 +156,7 @@ Outer:
 				return
 			}
 
-			if factory, ok = registry.GetTaskFactory(taskconf.Type); !ok {
+			if factory, ok = registry.GetTaskInitFunc(taskconf.Type); !ok {
 				err = fmt.Errorf("task %s doesn't exist", taskconf.Type)
 				return
 			}

@@ -8,7 +8,7 @@ import (
 )
 
 func init() {
-	registry.RegisterTaskFactory("info", InfoTaskFactory)
+	registry.RegisterTaskInitFunc("info", InfoTaskFactory)
 }
 
 // InfoTaskFactory is factory for InfoTask task (million dollar comment)

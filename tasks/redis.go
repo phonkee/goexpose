@@ -13,7 +13,7 @@ import (
 )
 
 func init() {
-	registry.RegisterTaskFactory("redis", RedisTaskFactory)
+	registry.RegisterTaskInitFunc("redis", RedisTaskFactory)
 }
 
 /*
@@ -148,7 +148,7 @@ func (r *RedisTask) Run(req *http.Request, data map[string]interface{}) response
 		address string
 		err     error
 	)
-	if address, err = goexpose.Interpolate(r.config.Address, data); err != nil {
+	if address, err = goexpose.RenderTextTemplate(r.config.Address, data); err != nil {
 		return response.Error(err)
 	}
 
@@ -169,7 +169,7 @@ func (r *RedisTask) Run(req *http.Request, data map[string]interface{}) response
 		args := make([]interface{}, 0)
 		for _, arg := range query.Args {
 			var ia string
-			if ia, err = goexpose.Interpolate(arg, data); err != nil {
+			if ia, err = goexpose.RenderTextTemplate(arg, data); err != nil {
 				qr = qr.Error(err)
 				goto AddItem
 			}
