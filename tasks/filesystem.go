@@ -15,7 +15,7 @@ import (
 )
 
 func init() {
-	registry.RegisterTaskInitFunc("filesystem", FilesystemFactory)
+	registry.RegisterTaskInitFunc("filesystem", FilesystemInitFunc)
 }
 
 func NewFilesystemConfig() *FilesystemConfig {
@@ -100,7 +100,7 @@ func (f *FilesystemTask) Run(r *http.Request, data map[string]interface{}) respo
 	}
 
 	if output, err = goexpose.RenderTextTemplate(f.config.Output, data); err != nil {
-		return response.Error(err).Status(http.StatusInternalServerError)
+		return response.Error(err)
 	}
 
 	// raw body
@@ -114,8 +114,8 @@ func (f *FilesystemTask) Run(r *http.Request, data map[string]interface{}) respo
 	return response.Result(b64content).Data("filename", ff)
 }
 
-// FilesystemFactory creates filesystem tasks
-func FilesystemFactory(s domain.Server, tc *domain.TaskConfig, ec *domain.EndpointConfig) (result []domain.Task, err error) {
+// FilesystemInitFunc creates filesystem tasks
+func FilesystemInitFunc(s domain.Server, tc *domain.TaskConfig, ec *domain.EndpointConfig) (result []domain.Task, err error) {
 
 	config := NewFilesystemConfig()
 	if err = json.Unmarshal(tc.Config, config); err != nil {

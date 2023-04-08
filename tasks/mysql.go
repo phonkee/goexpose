@@ -15,7 +15,7 @@ import (
 )
 
 func init() {
-	registry.RegisterTaskInitFunc("mysql", MySQLTaskFactory)
+	registry.RegisterTaskInitFunc("mysql", MySQLTaskInitFunc)
 }
 
 /*
@@ -77,8 +77,8 @@ func (m *MySQLTaskConfigQuery) Validate() (err error) {
 	return
 }
 
-// MySQLTaskFactory to create task
-func MySQLTaskFactory(s domain.Server, tc *domain.TaskConfig, ec *domain.EndpointConfig) (result []domain.Task, err error) {
+// MySQLTaskInitFunc to create task
+func MySQLTaskInitFunc(s domain.Server, tc *domain.TaskConfig, ec *domain.EndpointConfig) (result []domain.Task, err error) {
 	config := &MySQLTaskConfig{}
 	if err = json.Unmarshal(tc.Config, config); err != nil {
 		return

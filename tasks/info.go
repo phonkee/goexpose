@@ -27,9 +27,7 @@ func InfoTaskFactory(server domain.Server, taskconfig *domain.TaskConfig, ec *do
 	return
 }
 
-/*
-InfoTask - information about goexpose server
-*/
+// InfoTask - information about goexpose server
 type InfoTask struct {
 	domain.BaseTask
 

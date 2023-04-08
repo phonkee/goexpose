@@ -13,7 +13,7 @@ import (
 )
 
 func init() {
-	registry.RegisterTaskInitFunc("redis", RedisTaskFactory)
+	registry.RegisterTaskInitFunc("redis", RedisTaskInitFunc)
 }
 
 /*
@@ -106,7 +106,7 @@ func (r *RedisTaskConfigQuery) Validate() (err error) {
 }
 
 // Factory to create task instances
-func RedisTaskFactory(server domain.Server, tc *domain.TaskConfig, ec *domain.EndpointConfig) (result []domain.Task, err error) {
+func RedisTaskInitFunc(server domain.Server, tc *domain.TaskConfig, ec *domain.EndpointConfig) (result []domain.Task, err error) {
 	// address defaults to tcp
 	config := &RedisTaskConfig{
 		Address:  ":6379",

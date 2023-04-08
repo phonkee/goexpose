@@ -13,7 +13,7 @@ import (
 )
 
 func init() {
-	registry.RegisterTaskInitFunc("postgres", PostgresTaskFactory)
+	registry.RegisterTaskInitFunc("postgres", PostgresTaskInitFunc)
 }
 
 /*
@@ -22,7 +22,7 @@ PostgresTask
 run queries on postgres database
 */
 
-func PostgresTaskFactory(server domain.Server, tc *domain.TaskConfig, ec *domain.EndpointConfig) (tasks []domain.Task, err error) {
+func PostgresTaskInitFunc(server domain.Server, tc *domain.TaskConfig, ec *domain.EndpointConfig) (tasks []domain.Task, err error) {
 	config := &PostgresTaskConfig{}
 	if err = json.Unmarshal(tc.Config, config); err != nil {
 		return

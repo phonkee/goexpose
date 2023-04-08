@@ -14,7 +14,7 @@ import (
 )
 
 func init() {
-	registry.RegisterTaskInitFunc("shell", ShellTaskFactory)
+	registry.RegisterTaskInitFunc("shell", ShellTaskInitFunc)
 }
 
 // ShellTaskConfig for shell task
@@ -74,7 +74,7 @@ func NewShellTaskConfig() *ShellTaskConfig {
 /*
 Factory for ShellTask
 */
-func ShellTaskFactory(server domain.Server, taskconfig *domain.TaskConfig, ec *domain.EndpointConfig) (tasks []domain.Task, err error) {
+func ShellTaskInitFunc(server domain.Server, taskconfig *domain.TaskConfig, ec *domain.EndpointConfig) (tasks []domain.Task, err error) {
 	config := NewShellTaskConfig()
 	if err = json.Unmarshal(taskconfig.Config, config); err != nil {
 		return

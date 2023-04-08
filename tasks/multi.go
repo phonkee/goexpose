@@ -11,11 +11,11 @@ import (
 )
 
 func init() {
-	registry.RegisterTaskInitFunc("multi", MultiTaskFactory)
+	registry.RegisterTaskInitFunc("multi", MultiTaskInitFunc)
 }
 
-// MultiTaskFactory Factory to create task
-func MultiTaskFactory(s domain.Server, tc *domain.TaskConfig, ec *domain.EndpointConfig) (result []domain.Task, err error) {
+// MultiTaskInitFunc Factory to create task
+func MultiTaskInitFunc(s domain.Server, tc *domain.TaskConfig, ec *domain.EndpointConfig) (result []domain.Task, err error) {
 	config := &MultiTaskConfig{
 		Tasks: []*domain.TaskConfig{},
 	}

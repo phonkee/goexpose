@@ -14,7 +14,7 @@ import (
 )
 
 func init() {
-	registry.RegisterTaskInitFunc("cassandra", CassandraTaskFactory)
+	registry.RegisterTaskInitFunc("cassandra", CassandraTaskInitFunc)
 }
 
 /*
@@ -72,13 +72,13 @@ func (c *CassandraTaskConfigQuery) Validate() (err error) {
 
 	c.Keyspace = strings.TrimSpace(c.Keyspace)
 	if c.Keyspace == "" {
-		return fmt.Errorf("please provide keyspace.")
+		return fmt.Errorf("please provide keyspace")
 	}
 
 	return
 }
 
-func CassandraTaskFactory(s domain.Server, tc *domain.TaskConfig, ec *domain.EndpointConfig) (result []domain.Task, err error) {
+func CassandraTaskInitFunc(s domain.Server, tc *domain.TaskConfig, ec *domain.EndpointConfig) (result []domain.Task, err error) {
 	config := &CassandraTaskConfig{}
 	if err = json.Unmarshal(tc.Config, config); err != nil {
 		return
@@ -109,7 +109,7 @@ func (c *CassandraTask) Run(r *http.Request, data map[string]interface{}) respon
 	queries := make([]response.Response, 0)
 
 	for _, query := range c.config.Queries {
-		args := []interface{}{}
+		var args []interface{}
 
 		var (
 			Result  []map[string]interface{}
@@ -120,18 +120,18 @@ func (c *CassandraTask) Run(r *http.Request, data map[string]interface{}) respon
 
 		qr := response.OK()
 
-		chosts := []string{}
+		var cHosts []string
 		for _, i := range query.Cluster {
-			var chost string
-			if chost, err = goexpose.RenderTextTemplate(i, data); err != nil {
+			var cHost string
+			if cHost, err = goexpose.RenderTextTemplate(i, data); err != nil {
 				qr.Error(err)
 				goto Append
 			}
-			chosts = append(chosts, chost)
+			cHosts = append(cHosts, cHost)
 		}
 
 		// instantiate cluster
-		cluster = gocql.NewCluster(chosts...)
+		cluster = gocql.NewCluster(cHosts...)
 		if cluster.Keyspace, err = goexpose.RenderTextTemplate(query.Keyspace, data); err != nil {
 			qr = qr.Error(err)
 			goto Append
@@ -177,5 +177,6 @@ func (c *CassandraTask) Run(r *http.Request, data map[string]interface{}) respon
 	if c.config.singleResultIndex != -1 {
 		return response.Result(queries[c.config.singleResultIndex])
 	}
+
 	return response.Result(queries)
 }
