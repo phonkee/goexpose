@@ -27,9 +27,7 @@ type ShellTaskConfig struct {
 	singleResultIndex int
 }
 
-/*
-Validate validates config
-*/
+// Validate validates config
 func (s *ShellTaskConfig) Validate() (err error) {
 	if len(s.Commands) == 0 {
 		return errors.New("please provide at least one command")
@@ -71,9 +69,7 @@ func NewShellTaskConfig() *ShellTaskConfig {
 	}
 }
 
-/*
-Factory for ShellTask
-*/
+// ShellTaskInitFunc is init func for ShellTask
 func ShellTaskInitFunc(server domain.Server, taskconfig *domain.TaskConfig, ec *domain.EndpointConfig) (tasks []domain.Task, err error) {
 	config := NewShellTaskConfig()
 	if err = json.Unmarshal(taskconfig.Config, config); err != nil {
@@ -90,9 +86,7 @@ func ShellTaskInitFunc(server domain.Server, taskconfig *domain.TaskConfig, ec *
 	return
 }
 
-/*
-ShellTask runs shell commands
-*/
+// ShellTask runs shell commands
 type ShellTask struct {
 	domain.BaseTask
 
@@ -100,10 +94,7 @@ type ShellTask struct {
 	Config *ShellTaskConfig
 }
 
-/*
-Run method for shell task
-Run all commands and return results
-*/
+// Run method for shell task
 func (s *ShellTask) Run(r *http.Request, data map[string]interface{}) response.Response {
 
 	var results []response.Response
@@ -147,7 +138,7 @@ func (s *ShellTask) Run(r *http.Request, data map[string]interface{}) response.R
 
 		// get output
 		if out, err := cmd.Output(); err != nil {
-			cmdresp.Error(err)
+			cmdresp = cmdresp.Error(err)
 			goto Append
 		} else {
 			// format out

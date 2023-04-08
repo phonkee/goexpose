@@ -101,6 +101,15 @@ endpoints:
           output: "{{.query.output}}"
           directory: "/tmp"
           index: true
+  - path: "/email/send"
+    methods:
+      POST:
+        type: "email"
+        smtp:
+          host: localhost
+        config:
+          sender: phonkee@phonkee.eu
+          debug: true
 authorizers:
   basic:
     type: "basic"

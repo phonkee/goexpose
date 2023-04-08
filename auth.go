@@ -16,15 +16,6 @@ import (
 	"github.com/nmcclain/ldap"
 )
 
-var (
-	ErrUnauthorized               = errors.New("unauthorized")
-	ErrBlacklisted                = errors.New("user is blacklisted")
-	ErrNotWhitelisted             = errors.New("user is not whitelisted")
-	ErrBlacklistWhitelistProvided = errors.New("blacklist and whitelist set, that doesn't make sense.")
-	ErrUnknownNetwork             = errors.New("unknown network")
-	ErrURLInvalidTemplate         = errors.New("url is invalid template")
-)
-
 /*
 Authorizer implements authorization
 */
@@ -190,7 +181,7 @@ func (b *BasicAuthorizer) Authorize(r *http.Request) (err error) {
 	}
 
 	if username != b.config.Username || password != b.config.Password {
-		return ErrUnauthorized
+		return domain.ErrUnauthorized
 	}
 
 	return
@@ -222,7 +213,7 @@ Validate configuration
 */
 func (l *LDAPAuthorizerConfig) Validate() (err error) {
 	if len(l.Whitelist) > 0 && len(l.Blacklist) > 0 {
-		return ErrBlacklistWhitelistProvided
+		return domain.ErrBlacklistWhitelistProvided
 	}
 
 	found := false
@@ -233,7 +224,7 @@ func (l *LDAPAuthorizerConfig) Validate() (err error) {
 	}
 
 	if !found {
-		return ErrUnknownNetwork
+		return domain.ErrUnknownNetwork
 	}
 
 	return
@@ -298,7 +289,7 @@ func (l *LDAPAuthorizer) Authorize(r *http.Request) (err error) {
 	if len(l.config.Blacklist) > 0 {
 		for _, bl := range l.config.Blacklist {
 			if bl == username {
-				return ErrBlacklisted
+				return domain.ErrBlacklisted
 			}
 		}
 	}
@@ -314,7 +305,7 @@ func (l *LDAPAuthorizer) Authorize(r *http.Request) (err error) {
 		}
 
 		if !found {
-			return ErrNotWhitelisted
+			return domain.ErrNotWhitelisted
 		}
 	}
 
@@ -365,8 +356,8 @@ func (h *HttpAuthorizer) Authorize(r *http.Request) (err error) {
 
 	// prepare data for template interpolation
 	data := map[string]interface{}{
-		"username": "phonkee",
-		"password": "password",
+		"username": "",
+		"password": "",
 	}
 
 	var (
@@ -387,7 +378,7 @@ func (h *HttpAuthorizer) Authorize(r *http.Request) (err error) {
 	}
 
 	if response.StatusCode != http.StatusOK {
-		return ErrUnauthorized
+		return domain.ErrUnauthorized
 	}
 
 	return
