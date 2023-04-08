@@ -14,6 +14,7 @@ func init() {
 	RegisterAuthorizer("basic", BasicAuthorizerInitFunc)
 }
 
+// TODO: we should have ability to fetch usernames/passwords from file
 type BasicAuthorizer struct {
 	config *BasicAuthorizerConfig
 }

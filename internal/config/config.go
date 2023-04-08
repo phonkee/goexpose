@@ -2,69 +2,13 @@ package config
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"github.com/mcuadros/go-defaults"
 	"github.com/phonkee/goexpose/domain"
 	"net/http"
-	"os"
-	"path/filepath"
 	"regexp"
 	"strings"
 )
-
-// NewConfigFromFilename Returns filename from file
-func NewConfigFromFilename(filename string) (config *Config, err error) {
-	config = NewConfig()
-	var format string
-
-	ext := strings.ToLower(filepath.Ext(filename))
-	switch ext {
-	case "yaml", "yml":
-		format = "yaml"
-	case "json":
-		format = "json"
-	default:
-		err = fmt.Errorf("unknown file extension %s", ext)
-	}
-
-	var (
-		result []byte
-	)
-	if result, err = os.ReadFile(filename); err != nil {
-		return
-	}
-
-	found := false
-	for name, fmtUnmarshalFunc := range configFormats {
-		if name == format {
-			if err = fmtUnmarshalFunc(result, config); err != nil {
-				return
-			}
-			found = true
-			break
-		}
-	}
-
-	if !found {
-		err = errors.New("file format not found")
-		return
-	}
-
-	// unmarshal config
-	if err = json.Unmarshal(result, config); err != nil {
-		return
-	}
-
-	// get config dir
-	if config.Directory, err = filepath.Abs(filepath.Dir(filename)); err != nil {
-		return
-	}
-	// and raw config for some special cases
-	config.Raw = result
-
-	return
-}
 
 // NewConfig returns config with default values
 func NewConfig() *Config {

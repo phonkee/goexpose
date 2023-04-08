@@ -2,7 +2,9 @@ package config
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/ghodss/yaml"
+	"github.com/phonkee/goexpose/domain"
 	"sync"
 )
 
@@ -36,4 +38,20 @@ func init() {
 			return
 		}
 	}()
+}
+
+func unmarshalConfig(content, extension string) (*Config, error) {
+	configFormatsLock.RLock()
+	defer configFormatsLock.RUnlock()
+
+	uf, ok := configFormats[extension]
+	if !ok {
+		return nil, fmt.Errorf("%w: %v", domain.ErrInvalidConfigType, extension)
+	}
+
+	config := NewConfig()
+	if err := uf([]byte(content), config); err != nil {
+		return nil, err
+	}
+	return config, nil
 }

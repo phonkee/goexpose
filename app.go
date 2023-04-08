@@ -3,6 +3,8 @@ package goexpose
 import (
 	_ "embed"
 	"fmt"
+	"github.com/davecgh/go-spew/spew"
+	"github.com/phonkee/goexpose/internal/config"
 	"github.com/phonkee/goexpose/internal/server"
 	"github.com/urfave/cli/v2"
 )
@@ -35,11 +37,29 @@ func NewApp() *cli.App {
 	app.Commands = []*cli.Command{
 		{
 			Name:  "serve",
-			Usage: "Starts goexpose server",
+			Usage: "serve goexpose server",
+			Action: func(c *cli.Context) error {
+				cfg, err := config.NewFromFilename(c.String("config"))
+				if err != nil {
+					return err
+				}
+
+				srv, err := server.New(cfg)
+				if err != nil {
+					return err
+				}
+
+				spew.Dump(srv)
+
+				return nil
+			},
 		},
 		{
 			Name:  "validate",
-			Usage: "Validate config file",
+			Usage: "validate config file",
+			Action: func(c *cli.Context) error {
+				return fmt.Errorf("not implemented")
+			},
 		},
 	}
 

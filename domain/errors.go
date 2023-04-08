@@ -19,7 +19,8 @@ var (
 	ErrBlacklistWhitelistProvided = errors.New("blacklist and whitelist set, that doesn't make sense")
 	ErrUnknownNetwork             = errors.New("unknown network")
 
-	ErrMissingQueries = errors.New("missing queries")
-	ErrMissingURL     = errors.New("please provide url")
-	ErrInvalidQuery   = errors.New("invalid query")
+	ErrMissingQueries    = errors.New("missing queries")
+	ErrMissingURL        = errors.New("please provide url")
+	ErrInvalidQuery      = errors.New("invalid query")
+	ErrInvalidConfigType = errors.New("invalid config type")
 )
