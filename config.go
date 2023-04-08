@@ -48,9 +48,7 @@ func init() {
 	}()
 }
 
-/*
-Returns filename from file
-*/
+// NewConfigFromFilename Returns filename from file
 func NewConfigFromFilename(filename, format string) (config *Config, err error) {
 	config = NewConfig()
 

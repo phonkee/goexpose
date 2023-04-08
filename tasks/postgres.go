@@ -10,19 +10,19 @@ import (
 	"github.com/phonkee/goexpose/domain"
 	"github.com/phonkee/goexpose/tasks/registry"
 	"net/http"
+	"strings"
 )
 
 func init() {
 	registry.RegisterTaskInitFunc("postgres", PostgresTaskInitFunc)
 }
 
-/*
-PostgresTask
-
-run queries on postgres database
-*/
-
-func PostgresTaskInitFunc(server domain.Server, tc *domain.TaskConfig, ec *domain.EndpointConfig) (tasks []domain.Task, err error) {
+// PostgresTaskInitFunc initializes postgres task
+func PostgresTaskInitFunc(
+	server domain.Server,
+	tc *domain.TaskConfig,
+	ec *domain.EndpointConfig,
+) (tasks []domain.Task, err error) {
 	config := &PostgresTaskConfig{}
 	if err = json.Unmarshal(tc.Config, config); err != nil {
 		return
@@ -46,8 +46,16 @@ type PostgresTaskConfig struct {
 
 func (p *PostgresTaskConfig) Validate() (err error) {
 	if len(p.Queries) == 0 {
-		return errors.New("please provide at least one queryS")
+		return domain.ErrMissingQueries
 	}
+
+	// validate queries
+	for _, q := range p.Queries {
+		if err = q.Validate(); err != nil {
+			return
+		}
+	}
+
 	if p.SingleResult != nil {
 		p.singleResultIndex = *p.SingleResult
 		if p.singleResultIndex > len(p.Queries)-1 {
@@ -65,7 +73,17 @@ type PostgresTaskConfigQuery struct {
 	Args  []string `json:"args"`
 }
 
-// Postgres task
+func (p *PostgresTaskConfigQuery) Validate() error {
+	if u := strings.TrimSpace(p.URL); u == "" {
+		return domain.ErrMissingURL
+	}
+	if q := strings.TrimSpace(p.Query); q == "" {
+		return domain.ErrInvalidQuery
+	}
+	return nil
+}
+
+// PostgresTask the magnificent postgres task
 type PostgresTask struct {
 	domain.BaseTask
 
@@ -73,9 +91,7 @@ type PostgresTask struct {
 	config *PostgresTaskConfig
 }
 
-/*
-Run postgres task
-*/
+// Run postgres task
 func (p *PostgresTask) Run(r *http.Request, data map[string]interface{}) response.Response {
 
 	var queryResults []response.Response

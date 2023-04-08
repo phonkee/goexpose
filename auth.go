@@ -22,20 +22,20 @@ type Authorizer interface {
 }
 
 func init() {
-	RegisterAuthorizer("basic", BasicAuthorizerFactory)
-	RegisterAuthorizer("ldap", LDAPAuthorizerFactory)
-	RegisterAuthorizer("http", HttpAuthorizerFactory)
+	RegisterAuthorizer("basic", BasicAuthorizerInitFunc)
+	RegisterAuthorizer("ldap", LDAPAuthorizerInitFunc)
+	RegisterAuthorizer("http", HttpAuthorizerInitFunc)
 }
 
-// AuthorizerFactory returns new authorizer
-type AuthorizerFactory func(config *AuthorizerConfig) (Authorizer, error)
+// AuthorizerInitFunc returns new authorizer
+type AuthorizerInitFunc func(config *AuthorizerConfig) (Authorizer, error)
 
 var (
-	authorizers     = map[string]AuthorizerFactory{}
+	authorizers     = map[string]AuthorizerInitFunc{}
 	authorizerslock = &sync.RWMutex{}
 )
 
-func RegisterAuthorizer(id string, factory AuthorizerFactory) {
+func RegisterAuthorizer(id string, factory AuthorizerInitFunc) {
 	authorizerslock.Lock()
 	defer authorizerslock.Unlock()
 	if _, ok := authorizers[id]; ok {
@@ -44,9 +44,7 @@ func RegisterAuthorizer(id string, factory AuthorizerFactory) {
 	authorizers[id] = factory
 }
 
-/*
-AuthorizerExists returns if exists authorizer by given id
-*/
+// AuthorizerExists returns if exists authorizer by given id
 func AuthorizerExists(id string) (ok bool) {
 	authorizerslock.RLock()
 	defer authorizerslock.RUnlock()
@@ -54,7 +52,7 @@ func AuthorizerExists(id string) (ok bool) {
 	return
 }
 
-// Returns authorizers for given config
+// GetAuthorizers Returns authorizers for given config
 // First step is that it validates authorizers
 func GetAuthorizers(config *Config) (result domain.Authorizers, err error) {
 	result = domain.Authorizers{}
@@ -70,7 +68,7 @@ func GetAuthorizers(config *Config) (result domain.Authorizers, err error) {
 		}
 
 		var (
-			factory AuthorizerFactory
+			factory AuthorizerInitFunc
 			ok      bool
 		)
 		if factory, ok = authorizers[ac.Type]; !ok {
@@ -114,7 +112,7 @@ type BasicAuthorizerConfig struct {
 	Password string `json:"password"`
 }
 
-func BasicAuthorizerFactory(ac *AuthorizerConfig) (result Authorizer, err error) {
+func BasicAuthorizerInitFunc(ac *AuthorizerConfig) (result Authorizer, err error) {
 	config := &BasicAuthorizerConfig{}
 	if err = json.Unmarshal(ac.Config, config); err != nil {
 		return
@@ -223,7 +221,7 @@ func (l *LDAPAuthorizerConfig) Validate() (err error) {
 	return
 }
 
-func LDAPAuthorizerFactory(ac *AuthorizerConfig) (result Authorizer, err error) {
+func LDAPAuthorizerInitFunc(ac *AuthorizerConfig) (result Authorizer, err error) {
 	config := &LDAPAuthorizerConfig{
 		Host:    LDAP_DEFAULT_HOST,
 		Port:    LDAP_DEFAULT_PORT,
@@ -316,7 +314,7 @@ http authorizer
 http authorizer basically makes http request to check username and password against web service.
 */
 
-func HttpAuthorizerFactory(ac *AuthorizerConfig) (result Authorizer, err error) {
+func HttpAuthorizerInitFunc(ac *AuthorizerConfig) (result Authorizer, err error) {
 
 	var (
 		config *HttpAuthorizerConfig
