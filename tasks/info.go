@@ -40,24 +40,28 @@ type InfoTask struct {
 	routes []*domain.Route
 }
 
+type TaskInfo struct {
+	Path        string   `json:"path"`
+	Method      string   `json:"method"`
+	Authorizers []string `json:"authorizers,omitempty"`
+	Description string   `json:"description,omitempty"`
+	Type        string   `json:"type"`
+}
+
 // Run run run.
 func (i *InfoTask) Run(r *http.Request, data map[string]interface{}) response.Response {
 
-	endpoints := make([]response.Response, 0)
+	endpoints := make([]TaskInfo, 0)
 
 	// add tasks to result
 	for _, route := range i.routes {
-		r := response.OK()
-		r = r.Data("path", route.Path)
-		r = r.Data("method", route.Method)
-		if len(route.TaskConfig.Authorizers) > 0 {
-			r = r.Data("authorizers", route.TaskConfig.Authorizers)
-		}
-		r = r.Data("type", route.TaskConfig.Type)
-		if route.TaskConfig.Description != "" {
-			r = r.Data("description", route.TaskConfig.Description)
-		}
-		endpoints = append(endpoints, r)
+		endpoints = append(endpoints, TaskInfo{
+			Path:        route.Path,
+			Method:      route.Method,
+			Authorizers: route.TaskConfig.Authorizers,
+			Description: route.TaskConfig.Description,
+			Type:        route.TaskConfig.Type,
+		})
 	}
 
 	return response.OK().Result(map[string]interface{}{

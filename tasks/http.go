@@ -19,14 +19,16 @@ func init() {
 }
 
 /*
-HttpTask configuration
+HttpTaskConfig configuration
 
 Attrs:
 Method - if blank, method from request will be used
 Format - "json", "text", ""
-	if blank json will be guessed from Content-Type header
-*/
 
+	if blank json will be guessed from Content-Type header
+
+TODO: add ability to return early on first error
+*/
 type HttpTaskConfig struct {
 	URLs         []*HttpTaskConfigURL `json:"urls"`
 	SingleResult *int                 `json:"single_result"`
