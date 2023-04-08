@@ -23,7 +23,12 @@ func NewApp() *cli.App {
 		},
 	}
 	app.Flags = []cli.Flag{
-		&cli.StringFlag{Name: "config", Usage: "config filename"},
+		&cli.StringFlag{
+			Name:    "config",
+			Usage:   "config filename accepts supported formats (json, yaml)",
+			EnvVars: []string{"GOEXPOSE_CONFIG"},
+			Aliases: []string{"c"},
+		},
 	}
 	app.Usage = fmt.Sprintf(server.Logo, version)
 	app.Version = version

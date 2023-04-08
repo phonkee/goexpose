@@ -2,60 +2,36 @@ package config
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/mcuadros/go-defaults"
 	"github.com/phonkee/goexpose/domain"
-	"io/ioutil"
 	"net/http"
+	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
-	"sync"
-
-	"errors"
-	"github.com/ghodss/yaml"
 )
-
-type unmarshalFunc func([]byte, interface{}) error
-
-var (
-	configFormats     map[string]unmarshalFunc
-	configFormatsLock *sync.RWMutex
-)
-
-func init() {
-
-	// prepare configuration formats (currently json, yaml)
-	configFormats = map[string]unmarshalFunc{}
-	configFormatsLock = &sync.RWMutex{}
-
-	func() {
-		configFormatsLock.Lock()
-		defer configFormatsLock.Unlock()
-		configFormats["json"] = json.Unmarshal
-
-		// custom yaml unmarshal, since when used directly it panics.
-		// so we just convert yaml to json and call json unmarshal
-		configFormats["yaml"] = func(body []byte, target interface{}) (err error) {
-			if response, e := yaml.YAMLToJSON(body); e != nil {
-				err = e
-			} else {
-				err = json.Unmarshal(response, target)
-			}
-
-			return
-		}
-	}()
-}
 
 // NewConfigFromFilename Returns filename from file
-func NewConfigFromFilename(filename, format string) (config *Config, err error) {
+func NewConfigFromFilename(filename string) (config *Config, err error) {
 	config = NewConfig()
+	var format string
+
+	ext := strings.ToLower(filepath.Ext(filename))
+	switch ext {
+	case "yaml", "yml":
+		format = "yaml"
+	case "json":
+		format = "json"
+	default:
+		err = fmt.Errorf("unknown file extension %s", ext)
+	}
 
 	var (
 		result []byte
 	)
-	if result, err = ioutil.ReadFile(filename); err != nil {
+	if result, err = os.ReadFile(filename); err != nil {
 		return
 	}
 
@@ -76,14 +52,16 @@ func NewConfigFromFilename(filename, format string) (config *Config, err error) 
 	}
 
 	// unmarshal config
-	//if err = json.Unmarshal(result, config); err != nil {
-	//	return
-	//}
+	if err = json.Unmarshal(result, config); err != nil {
+		return
+	}
 
 	// get config dir
 	if config.Directory, err = filepath.Abs(filepath.Dir(filename)); err != nil {
 		return
 	}
+	// and raw config for some special cases
+	config.Raw = result
 
 	return
 }
@@ -107,6 +85,7 @@ type Config struct {
 	Endpoints   []*domain.EndpointConfig     `json:"endpoints"`
 	ReloadEnv   bool                         `json:"reload_env"`
 	Directory   string                       `json:"-"`
+	Raw         json.RawMessage              `json:"-"`
 }
 
 type SSLConfig struct {
