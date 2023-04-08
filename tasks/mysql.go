@@ -9,12 +9,13 @@ import (
 	"github.com/phonkee/go-response"
 	"github.com/phonkee/goexpose"
 	"github.com/phonkee/goexpose/domain"
+	"github.com/phonkee/goexpose/tasks/registry"
 	"net/http"
 	"strings"
 )
 
 func init() {
-	goexpose.RegisterTaskFactory("mysql", MySQLTaskFactory)
+	registry.RegisterTaskFactory("mysql", MySQLTaskFactory)
 }
 
 /*

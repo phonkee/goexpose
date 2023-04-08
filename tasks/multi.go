@@ -5,13 +5,13 @@ import (
 	"errors"
 	"fmt"
 	"github.com/phonkee/go-response"
-	"github.com/phonkee/goexpose"
 	"github.com/phonkee/goexpose/domain"
+	"github.com/phonkee/goexpose/tasks/registry"
 	"net/http"
 )
 
 func init() {
-	goexpose.RegisterTaskFactory("multi", MultiTaskFactory)
+	registry.RegisterTaskFactory("multi", MultiTaskFactory)
 }
 
 // MultiTaskFactory Factory to create task
@@ -50,7 +50,7 @@ func MultiTaskFactory(s domain.Server, tc *domain.TaskConfig, ec *domain.Endpoin
 			tasks   []domain.Task
 		)
 
-		if factory, ok = goexpose.GetTaskFactory(mtc.Type); !ok {
+		if factory, ok = registry.GetTaskFactory(mtc.Type); !ok {
 			err = fmt.Errorf("task %s doesn't exist", mtc.Type)
 			return
 		}

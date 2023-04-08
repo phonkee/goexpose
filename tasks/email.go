@@ -7,8 +7,8 @@ import (
 	"github.com/mcuadros/go-defaults"
 	_ "github.com/mcuadros/go-defaults"
 	"github.com/phonkee/go-response"
-	"github.com/phonkee/goexpose"
 	"github.com/phonkee/goexpose/domain"
+	"github.com/phonkee/goexpose/tasks/registry"
 	"gopkg.in/gomail.v2"
 	_ "gopkg.in/gomail.v2"
 	"math/rand"
@@ -24,7 +24,7 @@ import (
 )
 
 func init() {
-	goexpose.RegisterTaskFactory("email", EmailTaskFactory)
+	registry.RegisterTaskFactory("email", EmailTaskFactory)
 }
 
 var (

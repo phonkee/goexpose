@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/phonkee/go-response"
 	"github.com/phonkee/goexpose/domain"
+	"github.com/phonkee/goexpose/tasks/registry"
 	"io"
 	"net/http"
 
@@ -155,7 +156,7 @@ Outer:
 				return
 			}
 
-			if factory, ok = GetTaskFactory(taskconf.Type); !ok {
+			if factory, ok = registry.GetTaskFactory(taskconf.Type); !ok {
 				err = fmt.Errorf("task %s doesn't exist", taskconf.Type)
 				return
 			}

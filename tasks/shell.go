@@ -7,13 +7,14 @@ import (
 	"github.com/phonkee/go-response"
 	"github.com/phonkee/goexpose"
 	"github.com/phonkee/goexpose/domain"
+	"github.com/phonkee/goexpose/tasks/registry"
 	"net/http"
 	"os/exec"
 	"strings"
 )
 
 func init() {
-	goexpose.RegisterTaskFactory("shell", ShellTaskFactory)
+	registry.RegisterTaskFactory("shell", ShellTaskFactory)
 }
 
 // ShellTaskConfig for shell task

@@ -7,6 +7,7 @@ import (
 	"github.com/phonkee/go-response"
 	"github.com/phonkee/goexpose"
 	"github.com/phonkee/goexpose/domain"
+	"github.com/phonkee/goexpose/tasks/registry"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -14,7 +15,7 @@ import (
 )
 
 func init() {
-	goexpose.RegisterTaskFactory("http", HttpTaskFactory)
+	registry.RegisterTaskFactory("http", HttpTaskFactory)
 }
 
 /*

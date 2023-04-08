@@ -17,3 +17,7 @@ Introduce commands and subcommands
 Use go-response package
 
 Use that instead of homebaked solution
+
+## have main func to be called, so someone can register its own tasks
+
+When someone wants to customize tasks, they can register their own tasks.

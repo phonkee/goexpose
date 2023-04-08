@@ -2,13 +2,13 @@ package tasks
 
 import (
 	"github.com/phonkee/go-response"
-	"github.com/phonkee/goexpose"
 	"github.com/phonkee/goexpose/domain"
+	"github.com/phonkee/goexpose/tasks/registry"
 	"net/http"
 )
 
 func init() {
-	goexpose.RegisterTaskFactory("info", InfoTaskFactory)
+	registry.RegisterTaskFactory("info", InfoTaskFactory)
 }
 
 // InfoTaskFactory is factory for InfoTask task (million dollar comment)

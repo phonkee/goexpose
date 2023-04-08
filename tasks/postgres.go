@@ -8,11 +8,12 @@ import (
 	"github.com/phonkee/go-response"
 	"github.com/phonkee/goexpose"
 	"github.com/phonkee/goexpose/domain"
+	"github.com/phonkee/goexpose/tasks/registry"
 	"net/http"
 )
 
 func init() {
-	goexpose.RegisterTaskFactory("postgres", PostgresTaskFactory)
+	registry.RegisterTaskFactory("postgres", PostgresTaskFactory)
 }
 
 /*
