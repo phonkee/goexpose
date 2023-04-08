@@ -20,6 +20,7 @@ func InfoTaskFactory(server domain.Server, taskconfig *domain.TaskConfig, ec *do
 		return
 	}
 
+	// manually add "us"...
 	routes = append(routes, &domain.Route{
 		Path:           ec.Path,
 		TaskConfig:     taskconfig,
