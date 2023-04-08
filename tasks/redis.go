@@ -156,20 +156,20 @@ func (r *RedisTask) Run(req *http.Request, data map[string]interface{}) response
 		return response.Error(err)
 	}
 
-	queries := make([]*goexpose.Response, 0)
+	queries := make([]response.Response, 0)
 
 	var (
 		reply interface{}
 		grr   interface{}
 	)
 	for _, query := range r.config.Queries {
-		qr := goexpose.NewResponse(http.StatusOK).StripStatusData()
+		qr := response.OK()
 
 		args := make([]interface{}, 0)
 		for _, arg := range query.Args {
 			var ia string
 			if ia, err = goexpose.Interpolate(arg, data); err != nil {
-				qr.Error(err)
+				qr = qr.Error(err)
 				goto AddItem
 			}
 			args = append(args, ia)
@@ -177,27 +177,27 @@ func (r *RedisTask) Run(req *http.Request, data map[string]interface{}) response
 
 		// return full query?
 		if r.config.ReturnQueries {
-			qr.AddValue("command", query.Command)
-			qr.AddValue("args", args)
+			qr = qr.Data("command", query.Command)
+			qr = qr.Data("args", args)
 		}
 
 		if reply, err = conn.Do(query.Command, args...); err != nil {
-			qr.Error(err)
+			qr = qr.Error(err)
 			goto AddItem
 		}
 
 		// not found (not nice but..)
 		if reply == nil {
-			qr.Error(errors.New("not found"))
+			qr = qr.Error(errors.New("not found"))
 			goto AddItem
 		}
 
 		if grr, err = r.GetReply(reply, query); err != nil {
-			qr.Error(err)
+			qr = qr.Error(err)
 			goto AddItem
 		}
 
-		qr.Result(grr)
+		qr = qr.Result(grr)
 
 	AddItem:
 		queries = append(queries, qr)

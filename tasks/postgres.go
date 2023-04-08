@@ -77,11 +77,11 @@ Run postgres task
 */
 func (p *PostgresTask) Run(r *http.Request, data map[string]interface{}) response.Response {
 
-	var queryResults []*goexpose.Response
+	var queryResults []response.Response
 
 	for _, query := range p.config.Queries {
 
-		qresponse := goexpose.NewResponse(http.StatusOK).StripStatusData()
+		qresponse := response.OK()
 
 		var (
 			args []interface{}
@@ -94,7 +94,7 @@ func (p *PostgresTask) Run(r *http.Request, data map[string]interface{}) respons
 			errq error
 		)
 		if url, err = goexpose.Interpolate(query.URL, data); err != nil {
-			qresponse.Error(err)
+			qresponse = qresponse.Error(err)
 			goto Append
 		}
 
@@ -103,7 +103,7 @@ func (p *PostgresTask) Run(r *http.Request, data map[string]interface{}) respons
 		for _, arg := range query.Args {
 			interpolated, e := goexpose.Interpolate(arg, data)
 			if e != nil {
-				qresponse.Error(e)
+				qresponse = qresponse.Error(e)
 				goto Append
 			}
 			args = append(args, interpolated)
@@ -111,13 +111,13 @@ func (p *PostgresTask) Run(r *http.Request, data map[string]interface{}) respons
 
 		// add query with args to response?
 		if p.config.ReturnQueries {
-			qresponse.AddValue("query", query.Query).AddValue("args", args)
+			qresponse = qresponse.Data("query", query.Query).Data("args", args)
 		}
 
 		if db, err = sqlx.Connect("postgres", url); err != nil {
 
 			if err, ok := err.(*pq.Error); ok {
-				qresponse.AddValue("error_code", err.Code.Name())
+				qresponse = qresponse.Data("error_code", err.Code.Name())
 			}
 			qresponse.Error(err)
 			goto Append
@@ -127,7 +127,7 @@ func (p *PostgresTask) Run(r *http.Request, data map[string]interface{}) respons
 		rows, errq = db.Queryx(query.Query, args...)
 		if errq != nil {
 			if errq, ok := errq.(*pq.Error); ok {
-				qresponse.AddValue("error_code", errq.Code.Name())
+				qresponse = qresponse.Data("error_code", errq.Code.Name())
 			}
 			qresponse.Error(errq)
 			goto Append
@@ -140,7 +140,7 @@ func (p *PostgresTask) Run(r *http.Request, data map[string]interface{}) respons
 			err = rows.MapScan(results)
 			if err != nil {
 				if err, ok := err.(*pq.Error); ok {
-					qresponse.AddValue("error_code", err.Code.Name())
+					qresponse = qresponse.Data("error_code", err.Code.Name())
 				}
 				qresponse.Error(err)
 				goto Append

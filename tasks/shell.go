@@ -105,13 +105,13 @@ Run all commands and return results
 */
 func (s *ShellTask) Run(r *http.Request, data map[string]interface{}) response.Response {
 
-	var results []*goexpose.Response
+	var results []response.Response
 
 	// run all commands
 	for _, command := range s.Config.Commands {
 
 		// strip status data from response
-		cmdresp := goexpose.NewResponse(http.StatusOK).StripStatusData()
+		cmdresp := response.OK()
 
 		var (
 			b            string
@@ -120,7 +120,7 @@ func (s *ShellTask) Run(r *http.Request, data map[string]interface{}) response.R
 			cmd          *exec.Cmd
 		)
 		if b, e = goexpose.Interpolate(command.Command, data); e != nil {
-			cmdresp.Error(e)
+			cmdresp = cmdresp.Error(e)
 			goto Append
 		}
 
@@ -128,7 +128,7 @@ func (s *ShellTask) Run(r *http.Request, data map[string]interface{}) response.R
 
 		// show command in result
 		if command.ReturnCommand {
-			cmdresp.AddValue("command", finalCommand)
+			cmdresp = cmdresp.Data("command", finalCommand)
 		}
 
 		// run command
@@ -151,15 +151,15 @@ func (s *ShellTask) Run(r *http.Request, data map[string]interface{}) response.R
 		} else {
 			// format out
 			if re, f, e := goexpose.Format(string(strings.TrimSpace(string(out))), command.Format); e == nil {
-				cmdresp.Result(re).AddValue("format", f)
+				cmdresp = cmdresp.Result(re).Data("format", f)
 			} else {
-				cmdresp.Error(e)
+				cmdresp = cmdresp.Error(e)
 			}
 			goto Append
 		}
 
 	Append:
-		results = append(results, cmdresp.StripStatusData())
+		results = append(results, cmdresp)
 	}
 
 	// single result

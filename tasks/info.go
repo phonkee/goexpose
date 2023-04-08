@@ -43,21 +43,21 @@ type InfoTask struct {
 // Run run run.
 func (i *InfoTask) Run(r *http.Request, data map[string]interface{}) response.Response {
 
-	endpoints := make([]*goexpose.Response, 0)
+	endpoints := make([]response.Response, 0)
 
 	// add tasks to result
 	for _, route := range i.routes {
-		r := goexpose.NewResponse(http.StatusOK)
-		r.AddValue("path", route.Path)
-		r.AddValue("method", route.Method)
+		r := response.OK()
+		r = r.Data("path", route.Path)
+		r = r.Data("method", route.Method)
 		if len(route.TaskConfig.Authorizers) > 0 {
-			r.AddValue("authorizers", route.TaskConfig.Authorizers)
+			r = r.Data("authorizers", route.TaskConfig.Authorizers)
 		}
-		r.AddValue("type", route.TaskConfig.Type)
+		r = r.Data("type", route.TaskConfig.Type)
 		if route.TaskConfig.Description != "" {
-			r.AddValue("description", route.TaskConfig.Description)
+			r = r.Data("description", route.TaskConfig.Description)
 		}
-		endpoints = append(endpoints, r.StripStatusData())
+		endpoints = append(endpoints, r)
 	}
 
 	return response.OK().Result(map[string]interface{}{

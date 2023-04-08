@@ -100,7 +100,7 @@ type MySQLTask struct {
 // Run mysql task.
 func (m *MySQLTask) Run(r *http.Request, data map[string]interface{}) response.Response {
 
-	queries := make([]*goexpose.Response, 0)
+	queries := make([]response.Response, 0)
 
 	var (
 		db   *sqlx.DB
@@ -114,24 +114,24 @@ func (m *MySQLTask) Run(r *http.Request, data map[string]interface{}) response.R
 			Rows []map[string]interface{}
 		)
 
-		args := []interface{}{}
+		args := make([]interface{}, 0)
 
-		qr := goexpose.NewResponse(http.StatusOK).StripStatusData()
+		qr := response.OK()
 
 		var url string
 		if url, err = goexpose.Interpolate(query.URL, data); err != nil {
-			qr.Error(err)
+			qr = qr.Error(err)
 			goto Append
 		}
 
 		if m.config.ReturnQueries {
-			qr.AddValue("query", query.Query)
+			qr = qr.Data("query", query.Query)
 		}
 
 		if db, err = sqlx.Open("mysql", url); err != nil {
-			qr.Error(err.Error())
+			qr = qr.Error(err.Error())
 			if err, ok := err.(*mysql.MySQLError); ok {
-				qr.AddValue("error_code", err.Number)
+				qr = qr.Data("error_code", err.Number)
 			}
 			goto Append
 		}
@@ -140,7 +140,7 @@ func (m *MySQLTask) Run(r *http.Request, data map[string]interface{}) response.R
 			var a string
 
 			if a, err = goexpose.Interpolate(arg, data); err != nil {
-				qr.Error(err)
+				qr = qr.Error(err)
 				goto Append
 			}
 
@@ -148,7 +148,7 @@ func (m *MySQLTask) Run(r *http.Request, data map[string]interface{}) response.R
 		}
 
 		if m.config.ReturnQueries {
-			qr.AddValue("args", args)
+			qr = qr.Data("args", args)
 		}
 
 		// run query
@@ -156,7 +156,7 @@ func (m *MySQLTask) Run(r *http.Request, data map[string]interface{}) response.R
 		if err != nil {
 			qr.Error(err)
 			if err, ok := err.(*mysql.MySQLError); ok {
-				qr.AddValue("error_code", err.Number)
+				qr = qr.Data("error_code", err.Number)
 			}
 			goto Append
 		}

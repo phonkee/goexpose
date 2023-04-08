@@ -29,7 +29,7 @@ func init() {
 
 var (
 	//go:embed templates/debug.html
-	debugTemplateString = ""
+	debugTemplateString string
 	debugTemplate       *textTemplate.Template
 )
 
