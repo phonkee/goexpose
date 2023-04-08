@@ -30,6 +30,20 @@ type Config struct {
 	ReloadEnv   bool                         `json:"reload_env"`
 	Directory   string                       `json:"-"`
 	Raw         json.RawMessage              `json:"-"`
+	Logging     Logging                      `json:"logging"`
+}
+
+func (c *Config) Validate() error {
+	for _, err := range []error{
+		c.Logging.Validate(),
+		c.Logging.Setup(),
+	} {
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 type SSLConfig struct {

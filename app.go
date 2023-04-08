@@ -44,6 +44,10 @@ func NewApp() *cli.App {
 					return err
 				}
 
+				if err := cfg.Validate(); err != nil {
+					return err
+				}
+
 				srv, err := server.New(cfg)
 				if err != nil {
 					return err

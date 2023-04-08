@@ -33,23 +33,19 @@ func main() {
 	//
 	//// read cfg file
 	//if cfg, err = config.NewConfigFromFilename(*configVar, *formatVar); err != nil {
-	//	glog.Errorf("cfg error: %v", err)
 	//	os.Exit(1)
 	//}
 	//
 	//// change working directory to cfg directory
 	//if err = os.Chdir(cfg.Directory); err != nil {
-	//	glog.Errorf("cfg error: %v", err)
 	//	os.Exit(1)
 	//}
 	//
 	//if srv, err = server.New(cfg); err != nil {
-	//	glog.Errorf("srv error: %v", err)
 	//	os.Exit(1)
 	//}
 	//
 	//if err = srv.Run(context.Background()); err != nil {
-	//	glog.Errorf("srv run error: %v", err)
 	//	os.Exit(1)
 	//}
 }

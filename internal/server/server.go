@@ -9,6 +9,7 @@ import (
 	"github.com/phonkee/goexpose/internal/auth"
 	"github.com/phonkee/goexpose/internal/config"
 	"github.com/phonkee/goexpose/internal/tasks/registry"
+	"go.uber.org/zap"
 	"io"
 	"net/http"
 
@@ -17,7 +18,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/golang/glog"
 	"github.com/gorilla/mux"
 	_ "github.com/phonkee/goexpose/internal/tasks"
 )
@@ -58,7 +58,7 @@ type Server struct {
 // Run runs http server
 func (s *Server) Run(ctx context.Context) (err error) {
 
-	glog.V(2).Infof(Logo, s.Version)
+	zap.L().Info("starting server")
 
 	if s.Router, err = s.router(); err != nil {
 		return
@@ -69,12 +69,12 @@ func (s *Server) Run(ctx context.Context) (err error) {
 
 	// ssl version
 	if s.Config.SSL != nil {
-		glog.Infof("Start listen on https://%s", listen)
+		zap.L().Info("Start listen", zap.String("address", listen))
 		if err = http.ListenAndServeTLS(listen, s.Config.SSL.Cert, s.Config.SSL.Key, s.Router); err != nil {
 			return
 		}
 	} else {
-		glog.Infof("Start listen on http://%s", listen)
+		zap.L().Info("Start listen", zap.String("address", listen))
 		if err = http.ListenAndServe(listen, s.Router); err != nil {
 			return
 		}
@@ -102,8 +102,6 @@ func (s *Server) router(ignored ...string) (router *mux.Router, err error) {
 
 	for _, route := range routes {
 		// Log registered route
-		glog.V(2).Infof("Register route for task: %s path: %s method: %v",
-			route.TaskConfig.Type, route.Path, route.Method)
 
 		// register route to router
 		router.HandleFunc(route.Path, s.Handle(route.Task, route.Authorizers, route.EndpointConfig, route.TaskConfig)).Methods(route.Method).Name(route.EndpointConfig.RouteName())
