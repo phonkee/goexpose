@@ -24,16 +24,16 @@ http authorizer basically makes http request to check username and password agai
 func HttpAuthorizerInitFunc(ac *config.AuthorizerConfig) (result Authorizer, err error) {
 
 	var (
-		config *HttpAuthorizerConfig
+		cfg *HttpAuthorizerConfig
 	)
 
-	// get config
-	if config, err = NewHttpAuthorizerConfig(ac); err != nil {
+	// get cfg
+	if cfg, err = NewHttpAuthorizerConfig(ac); err != nil {
 		return
 	}
 
 	ha := &HttpAuthorizer{
-		config: config,
+		config: cfg,
 	}
 
 	result = ha
@@ -59,10 +59,10 @@ func (h *HttpAuthorizer) Authorize(r *http.Request) (err error) {
 	}
 
 	var (
-		url, method, body string
+		uurl, method, body string
 	)
 
-	url, err = h.config.RenderURL(data)
+	uurl, err = h.config.RenderURL(data)
 	method, err = h.config.RenderMethod(data)
 	body, err = h.config.RenderData(data)
 
@@ -71,7 +71,7 @@ func (h *HttpAuthorizer) Authorize(r *http.Request) (err error) {
 	)
 
 	// use Requester
-	if _, response, err = utils.NewRequester().DoNew(method, url, strings.NewReader(body)); err != nil {
+	if _, response, err = utils.NewRequester().DoNew(method, uurl, strings.NewReader(body)); err != nil {
 		return err
 	}
 
@@ -90,8 +90,7 @@ Returns fresh copy of AuthorizerConfi
 
 func NewHttpAuthorizerConfig(ac *config.AuthorizerConfig) (hac *HttpAuthorizerConfig, err error) {
 	hac = &HttpAuthorizerConfig{
-		Method: "GET",
-		Data:   "",
+		Method: http.MethodGet,
 	}
 
 	if err = json.Unmarshal(ac.Config, hac); err != nil {

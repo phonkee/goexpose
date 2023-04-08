@@ -24,13 +24,13 @@ type BasicAuthorizerConfig struct {
 }
 
 func BasicAuthorizerInitFunc(ac *config.AuthorizerConfig) (result Authorizer, err error) {
-	config := &BasicAuthorizerConfig{}
-	if err = json.Unmarshal(ac.Config, config); err != nil {
+	cfg := &BasicAuthorizerConfig{}
+	if err = json.Unmarshal(ac.Config, cfg); err != nil {
 		return
 	}
 
 	result = &BasicAuthorizer{
-		config: config,
+		config: cfg,
 	}
 	return
 }
@@ -39,10 +39,8 @@ var (
 	ErrInvalidAuthorizationHeader = errors.New("invalid authorization header")
 )
 
-/*
-Return username and password
-*/
-func (a *BasicAuthorizer) GetBasicAuth(r *http.Request) (username, password string, err error) {
+// GetBasicAuth Return username and password
+func (b *BasicAuthorizer) GetBasicAuth(r *http.Request) (username, password string, err error) {
 
 	header := r.Header.Get("Authorization")
 	splitted := strings.SplitN(header, " ", 2)
@@ -72,9 +70,7 @@ func (a *BasicAuthorizer) GetBasicAuth(r *http.Request) (username, password stri
 	return
 }
 
-/*
-Check username and password
-*/
+// Authorize Checks username and password
 func (b *BasicAuthorizer) Authorize(r *http.Request) (err error) {
 	var username, password string
 

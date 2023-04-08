@@ -52,19 +52,19 @@ func (l *LDAPAuthorizerConfig) Validate() (err error) {
 }
 
 func LDAPAuthorizerInitFunc(ac *config.AuthorizerConfig) (result Authorizer, err error) {
-	config := &LDAPAuthorizerConfig{}
-	defaults.SetDefaults(config)
+	cfg := &LDAPAuthorizerConfig{}
+	defaults.SetDefaults(cfg)
 
-	if err = json.Unmarshal(ac.Config, config); err != nil {
+	if err = json.Unmarshal(ac.Config, cfg); err != nil {
 		return
 	}
 
-	if err = config.Validate(); err != nil {
+	if err = cfg.Validate(); err != nil {
 		return
 	}
 
 	result = &LDAPAuthorizer{
-		config: config,
+		config: cfg,
 		basic:  &BasicAuthorizer{},
 	}
 	return
