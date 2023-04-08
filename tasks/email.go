@@ -60,7 +60,7 @@ func EmailTaskFactory(server domain.Server, taskconfig *domain.TaskConfig, ec *d
 	}
 
 	// if we are not in debug mode, try to connect to smtp server
-	if !config.Debug {
+	if !config.Debug && !config.DisableConnectCheck {
 		if err = config.Connect(); err != nil {
 			return
 		}
@@ -84,18 +84,30 @@ type EmailSmtpConfig struct {
 	Cache    bool   `json:"cache" default:"false"` // not working currently
 }
 
+func (e *EmailSmtpConfig) Validate() error {
+	if e == nil {
+		return domain.ErrMissingSmtp
+	}
+	if host := strings.TrimSpace(e.Host); host == "" {
+		return fmt.Errorf("%w: %v", domain.ErrInvalidSmtp, "host")
+	}
+
+	return nil
+}
+
 // EmailTaskConfig represents email task config
 type EmailTaskConfig struct {
 	domain.BaseTask
-	Smtp         EmailSmtpConfig        `json:"smtp"`
-	Sender       string                 `json:"sender"`
-	Recipients   []string               `json:"recipients"`
-	Data         map[string]interface{} `json:"data"`
-	Subject      string                 `json:"subject"`
-	Body         string                 `json:"body"`
-	BodyFilename string                 `json:"body_filename"`
-	Debug        bool                   `json:"debug"`
-	Html         bool                   `json:"html"`
+	Smtp                *EmailSmtpConfig       `json:"smtp"`
+	Sender              string                 `json:"sender"`
+	Recipients          []string               `json:"recipients"`
+	Data                map[string]interface{} `json:"data"`
+	Subject             string                 `json:"subject"`
+	Body                string                 `json:"body"`
+	BodyFilename        string                 `json:"body_filename"`
+	Debug               bool                   `json:"debug"`
+	Html                bool                   `json:"html"`
+	DisableConnectCheck bool                   `json:"disable_connect_check"` // please use sparingly
 	// private parts (do not look)
 	contentType     string
 	subjectTemplate domain.TemplateExecutor
@@ -109,7 +121,7 @@ func (e *EmailTaskConfig) compile() (err error) {
 		return domain.ErrEmptySubject
 	} else {
 		if e.subjectTemplate, err = template.New(fmt.Sprintf("subject_%v", rand.Int())).Parse(subject); err != nil {
-			return
+			return fmt.Errorf("%w: subject: %v", domain.ErrInvalidTemplate, err)
 		}
 	}
 
@@ -123,7 +135,7 @@ func (e *EmailTaskConfig) compile() (err error) {
 		templateString = string(b)
 	} else {
 		if e.Body == "" {
-			return fmt.Errorf("please provide either template or template_filename")
+			return domain.ErrBodyMissing
 		}
 		templateString = e.Body
 	}
@@ -132,12 +144,12 @@ func (e *EmailTaskConfig) compile() (err error) {
 	if e.Html {
 		e.contentType = "text/html"
 		if e.bodyTemplate, err = htmlTemplate.New("email").Parse(templateString); err != nil {
-			return fmt.Errorf("%w: cannot parse html template", err)
+			return fmt.Errorf("%w: body: %v", domain.ErrInvalidTemplate, err)
 		}
 	} else {
 		e.contentType = "text/plain"
 		if e.bodyTemplate, err = textTemplate.New("email").Parse(templateString); err != nil {
-			return fmt.Errorf("%w: cannot parse text template", err)
+			return fmt.Errorf("%w: body: %v", domain.ErrInvalidTemplate, err)
 		}
 	}
 
@@ -146,6 +158,13 @@ func (e *EmailTaskConfig) compile() (err error) {
 
 // Validate configuration
 func (e *EmailTaskConfig) Validate() error {
+
+	// check for smtp
+	if !e.Debug {
+		if err := e.Smtp.Validate(); err != nil {
+			return err
+		}
+	}
 
 	// sender is always required
 	if sender := strings.TrimSpace(e.Sender); sender == "" {

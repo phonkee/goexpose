@@ -27,10 +27,12 @@ require (
 	github.com/jtolds/gls v4.20.0+incompatible // indirect
 	github.com/mattn/go-sqlite3 v1.14.16 // indirect
 	github.com/mcuadros/go-defaults v1.2.0 // indirect
+	github.com/mocktools/go-smtp-mock/v2 v2.0.5 // indirect
 	github.com/nmcclain/asn1-ber v0.0.0-20140416010459-ec51d5ed2137 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/smartystreets/assertions v1.2.0 // indirect
+	github.com/stretchr/objx v0.5.0 // indirect
 	github.com/stretchr/testify v1.8.2 // indirect
 	golang.org/x/net v0.0.0-20190311183353-d8887717615a // indirect
 	gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc // indirect

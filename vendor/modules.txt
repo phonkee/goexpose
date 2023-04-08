@@ -4,6 +4,7 @@
 ## explicit
 # github.com/davecgh/go-spew v1.1.1
 ## explicit
+github.com/davecgh/go-spew/spew
 # github.com/garyburd/redigo v1.0.0
 ## explicit
 github.com/garyburd/redigo/internal
@@ -54,6 +55,9 @@ github.com/lib/pq/oid
 # github.com/mcuadros/go-defaults v1.2.0
 ## explicit; go 1.14
 github.com/mcuadros/go-defaults
+# github.com/mocktools/go-smtp-mock/v2 v2.0.5
+## explicit; go 1.15
+github.com/mocktools/go-smtp-mock/v2
 # github.com/nmcclain/asn1-ber v0.0.0-20140416010459-ec51d5ed2137
 ## explicit
 github.com/nmcclain/asn1-ber
@@ -68,6 +72,7 @@ github.com/phonkee/go-response
 github.com/pkg/errors
 # github.com/pmezard/go-difflib v1.0.0
 ## explicit
+github.com/pmezard/go-difflib/difflib
 # github.com/smartystreets/assertions v1.2.0
 ## explicit; go 1.13
 github.com/smartystreets/assertions
@@ -79,8 +84,13 @@ github.com/smartystreets/assertions/internal/oglematchers
 github.com/smartystreets/goconvey/convey
 github.com/smartystreets/goconvey/convey/gotest
 github.com/smartystreets/goconvey/convey/reporting
+# github.com/stretchr/objx v0.5.0
+## explicit; go 1.12
+github.com/stretchr/objx
 # github.com/stretchr/testify v1.8.2
 ## explicit; go 1.13
+github.com/stretchr/testify/assert
+github.com/stretchr/testify/mock
 # golang.org/x/net v0.0.0-20190311183353-d8887717615a
 ## explicit
 golang.org/x/net/context
@@ -100,3 +110,4 @@ gopkg.in/inf.v0
 gopkg.in/yaml.v2
 # gopkg.in/yaml.v3 v3.0.1
 ## explicit
+gopkg.in/yaml.v3
