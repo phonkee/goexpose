@@ -7,9 +7,9 @@ import (
 	"github.com/go-sql-driver/mysql"
 	"github.com/jmoiron/sqlx"
 	"github.com/phonkee/go-response"
-	"github.com/phonkee/goexpose"
 	"github.com/phonkee/goexpose/domain"
 	"github.com/phonkee/goexpose/internal/tasks/registry"
+	"github.com/phonkee/goexpose/internal/utils"
 	"net/http"
 	"strings"
 )
@@ -120,7 +120,7 @@ func (m *MySQLTask) Run(r *http.Request, data map[string]interface{}) response.R
 		qr := response.OK()
 
 		var url string
-		if url, err = goexpose.RenderTextTemplate(query.URL, data); err != nil {
+		if url, err = utils.RenderTextTemplate(query.URL, data); err != nil {
 			qr = qr.Error(err)
 			goto Append
 		}
@@ -140,7 +140,7 @@ func (m *MySQLTask) Run(r *http.Request, data map[string]interface{}) response.R
 		for _, arg := range query.Args {
 			var a string
 
-			if a, err = goexpose.RenderTextTemplate(arg, data); err != nil {
+			if a, err = utils.RenderTextTemplate(arg, data); err != nil {
 				qr = qr.Error(err)
 				goto Append
 			}

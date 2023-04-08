@@ -8,6 +8,7 @@ import (
 	"github.com/phonkee/goexpose"
 	"github.com/phonkee/goexpose/domain"
 	"github.com/phonkee/goexpose/internal/tasks/registry"
+	"github.com/phonkee/goexpose/internal/utils"
 	"net/http"
 	"os/exec"
 	"strings"
@@ -111,7 +112,7 @@ func (s *ShellTask) Run(r *http.Request, data map[string]interface{}) response.R
 			finalCommand string
 			cmd          *exec.Cmd
 		)
-		if b, e = goexpose.RenderTextTemplate(command.Command, data); e != nil {
+		if b, e = utils.RenderTextTemplate(command.Command, data); e != nil {
 			cmdresp = cmdresp.Error(e)
 			goto Append
 		}

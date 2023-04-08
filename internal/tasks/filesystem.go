@@ -4,9 +4,9 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"github.com/phonkee/go-response"
-	"github.com/phonkee/goexpose"
 	"github.com/phonkee/goexpose/domain"
 	"github.com/phonkee/goexpose/internal/tasks/registry"
+	"github.com/phonkee/goexpose/internal/utils"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -54,12 +54,12 @@ func (f *FilesystemTask) Run(r *http.Request, data map[string]interface{}) respo
 	)
 
 	// interpolate filename
-	if filename, err = goexpose.RenderTextTemplate(f.config.File, data); err != nil {
+	if filename, err = utils.RenderTextTemplate(f.config.File, data); err != nil {
 		return response.Error(err)
 	}
 
 	// interpolate directory
-	if directory, err = goexpose.RenderTextTemplate(f.config.Directory, data); err != nil {
+	if directory, err = utils.RenderTextTemplate(f.config.Directory, data); err != nil {
 		return response.Error(err)
 	}
 
@@ -99,7 +99,7 @@ func (f *FilesystemTask) Run(r *http.Request, data map[string]interface{}) respo
 		return response.Error(err)
 	}
 
-	if output, err = goexpose.RenderTextTemplate(f.config.Output, data); err != nil {
+	if output, err = utils.RenderTextTemplate(f.config.Output, data); err != nil {
 		return response.Error(err)
 	}
 

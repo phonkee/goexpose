@@ -6,9 +6,9 @@ import (
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
 	"github.com/phonkee/go-response"
-	"github.com/phonkee/goexpose"
 	"github.com/phonkee/goexpose/domain"
 	"github.com/phonkee/goexpose/internal/tasks/registry"
+	"github.com/phonkee/goexpose/internal/utils"
 	"net/http"
 	"strings"
 )
@@ -110,7 +110,7 @@ func (p *PostgresTask) Run(r *http.Request, data map[string]interface{}) respons
 
 			errq error
 		)
-		if url, err = goexpose.RenderTextTemplate(query.URL, data); err != nil {
+		if url, err = utils.RenderTextTemplate(query.URL, data); err != nil {
 			qresponse = qresponse.Error(err)
 			goto Append
 		}
@@ -118,7 +118,7 @@ func (p *PostgresTask) Run(r *http.Request, data map[string]interface{}) respons
 		// interpolate all args
 		args = []interface{}{}
 		for _, arg := range query.Args {
-			interpolated, e := goexpose.RenderTextTemplate(arg, data)
+			interpolated, e := utils.RenderTextTemplate(arg, data)
 			if e != nil {
 				qresponse = qresponse.Error(e)
 				goto Append

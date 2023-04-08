@@ -2,7 +2,6 @@ package auth
 
 import (
 	"encoding/json"
-	"github.com/phonkee/goexpose"
 	"github.com/phonkee/goexpose/domain"
 	"github.com/phonkee/goexpose/internal/config"
 	"github.com/phonkee/goexpose/internal/utils"
@@ -128,13 +127,13 @@ type HttpAuthorizerConfig struct {
 }
 
 func (h *HttpAuthorizerConfig) RenderURL(data map[string]interface{}) (result string, err error) {
-	return goexpose.RenderTextTemplate(h.URL, data)
+	return utils.RenderTextTemplate(h.URL, data)
 }
 
 func (h *HttpAuthorizerConfig) RenderData(data map[string]interface{}) (result string, err error) {
-	return goexpose.RenderTextTemplate(h.Data, data)
+	return utils.RenderTextTemplate(h.Data, data)
 }
 
 func (h *HttpAuthorizerConfig) RenderMethod(data map[string]interface{}) (result string, err error) {
-	return goexpose.RenderTextTemplate(h.Method, data)
+	return utils.RenderTextTemplate(h.Method, data)
 }

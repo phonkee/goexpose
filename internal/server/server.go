@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/phonkee/go-response"
-	"github.com/phonkee/goexpose"
 	"github.com/phonkee/goexpose/domain"
 	"github.com/phonkee/goexpose/internal/auth"
 	"github.com/phonkee/goexpose/internal/config"
@@ -23,7 +22,7 @@ import (
 )
 
 var (
-	logo = `
+	Logo = `
      ______  ______  ______ __  __  ______ ______  ______  ______
     /\  ___\/\  __ \/\  ___/\_\_\_\/\  == /\  __ \/\  ___\/\  ___\
     \ \ \__ \ \ \/\ \ \  __\/_/\_\/\ \  _-\ \ \/\ \ \___  \ \  __\
@@ -35,8 +34,8 @@ var (
 // New returns new server instance
 func New(config *config.Config) (server *Server, err error) {
 	server = &Server{
-		Config:  config,
-		Version: goexpose.VERSION,
+		Config: config,
+		//Version: goexpose.VERSION,
 	}
 
 	return
@@ -58,7 +57,7 @@ type Server struct {
 // Run runs http server
 func (s *Server) Run(ctx context.Context) (err error) {
 
-	glog.V(2).Infof(logo, s.Version)
+	glog.V(2).Infof(Logo, s.Version)
 
 	if s.Router, err = s.router(); err != nil {
 		return

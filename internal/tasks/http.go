@@ -8,6 +8,7 @@ import (
 	"github.com/phonkee/goexpose"
 	"github.com/phonkee/goexpose/domain"
 	"github.com/phonkee/goexpose/internal/tasks/registry"
+	"github.com/phonkee/goexpose/internal/utils"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -145,7 +146,7 @@ func (h *HttpTask) Run(r *http.Request, data map[string]interface{}) response.Re
 		}
 
 		var b string
-		if b, err = goexpose.RenderTextTemplate(url.URL, data); err != nil {
+		if b, err = utils.RenderTextTemplate(url.URL, data); err != nil {
 			ir = ir.Error(err)
 			goto Append
 		}

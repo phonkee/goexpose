@@ -31,3 +31,4 @@ cmd/goexpose/goexpose
 
 run.sh
 build/
+vendor/

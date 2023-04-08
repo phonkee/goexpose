@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"github.com/gocql/gocql"
 	"github.com/phonkee/go-response"
-	"github.com/phonkee/goexpose"
 	"github.com/phonkee/goexpose/domain"
 	"github.com/phonkee/goexpose/internal/tasks/registry"
+	"github.com/phonkee/goexpose/internal/utils"
 	"net/http"
 	"strings"
 )
@@ -123,7 +123,7 @@ func (c *CassandraTask) Run(r *http.Request, data map[string]interface{}) respon
 		var cHosts []string
 		for _, i := range query.Cluster {
 			var cHost string
-			if cHost, err = goexpose.RenderTextTemplate(i, data); err != nil {
+			if cHost, err = utils.RenderTextTemplate(i, data); err != nil {
 				qr.Error(err)
 				goto Append
 			}
@@ -132,7 +132,7 @@ func (c *CassandraTask) Run(r *http.Request, data map[string]interface{}) respon
 
 		// instantiate cluster
 		cluster = gocql.NewCluster(cHosts...)
-		if cluster.Keyspace, err = goexpose.RenderTextTemplate(query.Keyspace, data); err != nil {
+		if cluster.Keyspace, err = utils.RenderTextTemplate(query.Keyspace, data); err != nil {
 			qr = qr.Error(err)
 			goto Append
 		}
@@ -147,7 +147,7 @@ func (c *CassandraTask) Run(r *http.Request, data map[string]interface{}) respon
 		}
 
 		for _, arg := range query.Args {
-			final, err := goexpose.RenderTextTemplate(arg, data)
+			final, err := utils.RenderTextTemplate(arg, data)
 			if err != nil {
 				qr = qr.Error(err)
 				goto Append
