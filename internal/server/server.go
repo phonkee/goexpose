@@ -108,6 +108,7 @@ func (s *Server) router(ignored ...string) (router *mux.Router, err error) {
 			zap.String("path", route.Path),
 			zap.String("method", route.Method),
 			zap.String("task", route.TaskConfig.Type),
+			zap.String("config_filename", s.Config.Filename),
 		)
 
 		// register route to router
@@ -156,13 +157,11 @@ Outer:
 			}
 
 			if factory, ok = registry.GetTaskInitFunc(taskconf.Type); !ok {
-				err = fmt.Errorf("task %s doesn't exist", taskconf.Type)
-				return
+				return nil, fmt.Errorf("task %s doesn't exist", taskconf.Type)
 			}
 
 			if tasks, err = factory(s, &taskconf, econfig); err != nil {
-				err = fmt.Errorf("task %s returned error: %s", taskconf.Type, err)
-				return
+				return nil, fmt.Errorf("task %s returned error: %s", taskconf.Type, err)
 			}
 
 			for _, task := range tasks {
@@ -186,9 +185,6 @@ Outer:
 	return
 }
 
-/*
-Handle func
-*/
 func (s *Server) Handle(task domain.Task, authorizers domain.Authorizers, ec *domain.EndpointConfig, tc *domain.TaskConfig) http.HandlerFunc {
 
 	env := s.GetEnv()
@@ -196,7 +192,7 @@ func (s *Server) Handle(task domain.Task, authorizers domain.Authorizers, ec *do
 	return func(w http.ResponseWriter, r *http.Request) {
 		defer func() {
 			if e := recover(); e != nil {
-				debug.PrintStack()
+				zap.L().Error("panic", zap.Any("error", e), zap.ByteString("stack", debug.Stack()))
 				response.New(http.StatusInternalServerError).Error(e).Write(w, r)
 			}
 		}()
@@ -245,6 +241,9 @@ func (s *Server) Handle(task domain.Task, authorizers domain.Authorizers, ec *do
 		} else {
 			params["env"] = env
 		}
+
+		// add writer to context
+		*r = *r.WithContext(context.WithValue(r.Context(), domain.WriterContextKey, w))
 
 		// prepare response
 		resp := task.Run(r, params)

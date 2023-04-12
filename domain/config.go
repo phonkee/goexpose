@@ -48,18 +48,16 @@ func (e *EndpointConfig) Validate() (err error) {
 
 func (e *EndpointConfig) RouteName() string {
 	hash := sha256.New()
-	io.WriteString(hash, e.Path)
+	_, _ = io.WriteString(hash, e.Path)
 	return fmt.Sprintf("%x", hash.Sum(nil))
 }
 
-/*
-Validate method validates task config
-*/
+// Validate method validates task config
 func (t *TaskConfig) Validate() (err error) {
 	t.Type = strings.TrimSpace(t.Type)
 	t.Description = strings.TrimSpace(t.Description)
 	if t.Type == "" {
-		return fmt.Errorf("Invalid task type")
+		return fmt.Errorf("invalid task type")
 	}
 
 	if t.QueryParams != nil {

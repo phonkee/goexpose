@@ -23,4 +23,7 @@ var (
 	ErrMissingURL        = errors.New("please provide url")
 	ErrInvalidQuery      = errors.New("invalid query")
 	ErrInvalidConfigType = errors.New("invalid config type")
+
+	ErrPubSubClosed         = errors.New("pubsub closed")
+	ErrPubSubInvalidRequest = errors.New("invalid pubsub request")
 )

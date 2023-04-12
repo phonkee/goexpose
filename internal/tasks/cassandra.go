@@ -93,7 +93,7 @@ func CassandraTaskInitFunc(s domain.Server, tc *domain.TaskConfig, ec *domain.En
 	return
 }
 
-// Cassandra task to run queries on cassandra
+// CassandraTask to run queries on cassandra
 type CassandraTask struct {
 	domain.BaseTask
 

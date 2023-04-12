@@ -23,4 +23,7 @@ Use that instead of homebaked solution
 When someone wants to customize tasks, they can register their own tasks.
 
 ## unify errors
+
 no more `error_code`
+
+## add pubsub task

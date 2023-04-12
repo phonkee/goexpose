@@ -31,6 +31,7 @@ type Config struct {
 	Directory   string                              `json:"-"`
 	Raw         json.RawMessage                     `json:"-"`
 	Logging     Logging                             `json:"logging"`
+	Filename    string                              `json:"-"`
 }
 
 func (c *Config) Validate() error {

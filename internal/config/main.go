@@ -10,6 +10,7 @@ import (
 // Currently supported formats are json and yaml.
 func NewFromFilename(filename string) (config *Config, err error) {
 	config = NewConfig()
+	config.Filename = filename
 
 	var (
 		contents []byte
